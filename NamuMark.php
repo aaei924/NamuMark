@@ -2,245 +2,261 @@
 use PressDo\Docs;
 require_once 'HTMLRenderer.php';
 require_once 'PressDoLib.php';
+class PlainWikiPage {
+	// 평문 데이터 호출
+	public $title, $text, $lastchanged;
+	function __construct($text) {
+		$this->title = '(inline wikitext)';
+		$this->text = $text;
+		$this->lastchanged = time();
+	}
+
+	function getPage($name) {
+		return new PlainWikiPage('');
+	}
+}
+
 class NamuMark{
-	public $redirectPattern = '/^#(?:redirect|넘겨주기) (.+)$/im';
-	public function __construct($content, $_options=array()){
-		if(is_array($content)){
-			$__l = Docs::LoadDocument(rawurlencode($content[0]), rawurlencode($content[1]));
-			$content = $__l['content'];
-		}
-		$this->defaultOptions = [
-			'wiki' => ['read' => $content],
-			'allowedExternalImageExts' => $_options,
-			'included' => false,
-			'includeParameters' => [],
-			'macroNames' => ['br', 'date', '목차', 'tableofcontents', '각주', 'footnote', 'toc', 'youtube', 'nicovideo', 'kakaotv', 'include', 'age', 'dday']
-		];
-		$options = $this->defaultOptions;
-		$this->wikitext = $options['wiki']['read'];
-		$this->rendererOptions = null;
-		$this->renderer = null;
-	}
-	private function seekEOL($text, $offset = 0){
-		return (strpos($text, '\n', $offset) == -1 )? mb_strlen($text) : strpos($text, '\n', $offset);
-	}
-	private function doParse(){
-		$multiBrackets = array([
-			'open' => '{{{',
-			'close' => '}}}',
-			'multiline' => true,
-			'processor' => 'renderProcessor'
-		]);
-		$this->renderer = ($this->rendererOptions)? new HTMLRenderer($this->rendererOptions):new HTMLRenderer();
-		$line = '';
-		$now = '';
-		$tokens = array();
-		if($this->wikitext === null)
-		    return array(['name' => 'error', 'type' => 'notfound']);
-		if(str_starts_with($this->wikitext, '#') && preg_match($this->redirectPattern, $this->wikitext, $r_match) && strpos($this->wikitext, $r_match[0]) === 0)
-	        return array(['name' => 'redirect', 'target' => $r_match[1]]);
-		for($i=0;$i < mb_strlen($this->wikitext); $i++){
-			$temp = array('pos' => $i);
-			$now = substr($this->wikitext,$i,1);
+    public $redirectPattern = '/^#(?:redirect|넘겨주기) (.+)$/im';
+    public function __construct($wpage){
+       
 
-			// func[0] = Gijon gap, func[1]: v => i = v
-			if($line == '' && $now == ' ' && $temp = listParser($this->wikitext, $i, fn($v) => $i = $v)){
-				$tokens = array_push($tokens, $temp);
-				$line = '';
-				$now = '';
-				continue;
-			}
-			if($line == '' && str_starts_with(substr($this->wikitext, $i), '|') && $temp = tableParser($this->wikitext, $i, fn($v)=>$i = $v)){
-				$tokens = array_push($tokens, $temp);
-				$line = '';
-				$now = '';
-				continue;
-			}
-			if($line == '' && str_starts_with(substr($this->wikitext, $i), '>') && $temp = blockquoteParser($this->wikitext, $i, fn($v) => $i = $v, fn($proc, $args) => $this->$proc($args[1], $args[2]))){    
-				$tokens = array_push($tokens, $temp);
-				$line = '';
-				$now = '';
-				continue;
-			}
-			foreach($multiBrackets as $bracket){
-				// Callproc moved into func
-				if(str_starts_with(substr($this->wikitext, $i), $bracket['open']) && $temp = bracketParser($this->wikitext, $i, fn($v) => $i = $v)){
-					$tokens = array_push($tokens, array(['name' => 'wikitext', 'treatAsLine' => true, 'text' => $line]),$temp);
-					$line = '';
-					$now = '';
-					break;
-				}
-			}
-			if($now === '\n'){
-				$tokens = array_push($tokens, array(['name' => 'wikitext', 'treatAsLine' => true, 'text' => $line]));
-			    $line = '';
-			}
-			else
-			    $line .= $now;
-		}
-		if(mb_strlen($line) != 0)
-		    $tokens = array_push($tokens,array(['name' => 'wikitext', 'treatAsLine' => true, 'text' => $line]));
-		function processTokens($newarr){
-			if(!is_array($newarr)) $newarr = [];
-			for($i=0;$i < count($newarr); $i++){
-				$v = $newarr[$i];
-				if($v['name'] !== 'wikitext')
-				    $this->renderer->processToken($v);
-				elseif($v['parseFormat'] || $v['treatAsBlock'])
-				    processTokens(blockParser($v['text']));
-				elseif($v['treatAsLine'])
-				    processTokens(lineParser($v['text']));
-			}
-		}
-		processTokens($tokens);
-		$this->renderer->getResult();
-	}
+        $this->wikitext = $wpage->text;
+    }
 
-	function blockParser($line){
-		$result = array();
-		$s_formats = ["'''", "''", '~~', '--', '__', '^^',',,'];
-		$s_result = [];
-		for($i=0; $i < count($s_formats); $i++) {
-			array_push($s_result, array(
-				'open' => $s_formats[$i],
-				'close' => $s_formats[$i],
-				'multiline' => false,
-				'processor' => 'textProcessor'
-			));
+    private function seekEOL($text, $offset = 0){
+	return (strpos($text, '\n', $offset) === false)? mb_strlen($text) : strpos($text, '\n', $offset);
+    }
+
+    public function parse(){
+        $multiBrackets = array([
+	    'open' => '{{{',
+	    'close' => '}}}',
+	    'multiline' => true,
+	    'processor' => 'renderProcessor'
+        ]);
+        $line = ''; $now = ''; $tokens = [];
+
+        if($this->wikitext === null) // No Content
+	    return array(['name' => 'error', 'type' => 'notfound']);
+
+        // Redirect(#로 시작하고, 패턴이 일치하며, 시작하자마자 이 패턴이 나타난다면)
+        if(str_starts_with($this->wikitext, '#') && preg_match($this->redirectPattern, $this->wikitext, $r_match) && strpos($this->wikitext, $r_match[0]) === 0)
+	    return array(['name' => 'redirect', 'target' => $r_match[1]]);
+
+        // offset 설정하기
+        for($i=0;$i < mb_strlen($this->wikitext); $i++){
+            $temp = ['pos' => $i];
+	    $now = substr($this->wikitext,$i,1);
+
+            // 라인 시작점에 공백이 있고 목록 파서가 작동하면
+            if($line == '' && $now == ' ' && $temp = $this->listParser($this->wikitext, $i, fn($v) => $i = $v)){
+	        array_push($tokens, $temp);
+	        $line = '';
+	        $now = '';
+	        continue;
+	    }
+
+            // 라인이 |로 시작하고 표 파서가 작동하면
+	    if($line == '' && str_starts_with(substr($this->wikitext, $i), '|') && $temp = $this->tableParser($this->wikitext, $i, fn($v)=>$i = $v)){
+                array_push($tokens, $temp);
+	        $line = '';
+	        $now = '';
+	        continue;
+	    }
+
+            // 라인이 >로 시작하고 인용문 파서가 작동하면
+	    if($line == '' && str_starts_with(substr($this->wikitext, $i), '>') && $temp = $this->blockquoteParser($this->wikitext, $i, fn($v) => $i = $v, fn($proc, $args) => $this->$proc($args[1], $args[2]))){
+	        array_push($tokens, $temp);
+	        $line = '';
+	        $now = '';
+	        continue;
+	    }
+
+            // multiBrackets 파싱
+	    foreach($multiBrackets as $bracket){
+	        // 여는 브라켓으로 시작하고 파서가 작동한다면
+	        if(str_starts_with(substr($this->wikitext, $i), $bracket['open']) && $temp = $this->bracketParser($this->wikitext, $i, fn($v) => $i = $v)){
+		    array_push($tokens, [['name' => 'wikitext', 'treatAsLine' => true, 'text' => $line]], $temp);
+		    $line = '';
+		    $now = '';
+		    break;
+	        }
+	    }
+
+            // 개행 지점일때
+	    if($now === '\n'){
+
+	        array_push($tokens, [['name' => 'wikitext', 'treatAsLine' => true, 'text' => $line]]);
+	        $line = '';
+	    } else {
+	        $line .= $now;
+            }
+            return $tokens;
+        }
+    }
+
+    function blockParser($line){
+	$result = array();
+	$s_formats = ["'''", "''", '~~', '--', '__', '^^',',,'];
+	$s_result = [];
+	foreach($s_formats as $s_e) {
+	    array_push($s_result, [
+	        'open' => $s_e,
+	        'close' => $s_e,
+	        'multiline' => false,
+	        'processor' => 'textProcessor'
+	    ]);
+	}
+	$singleBrackets = array_merge([[
+	    'open' => '{{{',
+	    'close' => '}}}',
+	    'multiline' => false,
+	    'processor' => 'textProcessor'
+	],
+        [
+	    'open' => '{{|',
+	    'close' => '|}}',
+	    'multiline' => false,
+	    'processor' => 'closureProcessor'
+	],
+	[
+	    'open' => '[[',
+	    'close' => ']]',
+	    'multiline' => false,
+	    'processor' => 'linkProcessor'
+        ],
+	[
+	    'open' => '[',
+	    'close' => ']',
+	    'multiline' => false,
+	    'processor' => 'macroProcessor'
+	],
+	[
+	    'open' => '@',
+	    'close' => '@',
+	    'multiline' => false,
+	    'processor' => 'textProcessor'
+	]], $s_result);
+	$plainTemp = '';
+
+        //
+	for($j=0;$j<mb_strlen($line);$j++){
+	    $extImgPattern = '/(https?:\\/\\/[^ \\n]+(?:\\??.)(?:'.implode('|',$options['allowedExternalImageExts']).'))(\\?[^ \n]+|)/i';
+            $extImgOptionPattern = '/[&?]((width|height|align)=(left|center|right|[0-9]+(?:%|px|)))/';
+
+            // offset 지점이 http로 시작하고, 패턴이 일치하며, 해당 패턴이 오프셋지점에 있을 때
+	    if(str_starts_with(substr($line, $j),'http') && preg_match($extImgPattern, $line, $matches) && strpos($line,$matches[0]) === 0){
+		$imgUrl = $matches[1];
+		$optionsString = $matches[2];
+		$optionMatches = preg_match_all($extImgOptionPattern, $optionsString);
+
+                // 외부이미지 불러오기 옵션
+		if (!is_array($optionMatches[1])) $optionMatches = array(null, []);
+		$styleOptions = [];
+		for($k=1;$k<count($optionMatches[1]);$k++){
+                    $styleOptions[$optionMatches[1][$k]] = $optionMatches[2][$k];
 		}
-		$singleBrackets = array_merge(array(
-			array(
-				'open' => '{{{',
-				'close' => '}}}',
-				'multiline' => false,
-				'processor' => 'textProcessor'
-			),
-			array(
-				'open' => '{{|',
-				'close' => '|}}',
-				'multiline' => false,
-				'processor' => 'closureProcessor'
-			),
-			array(
-				'open' => '[[',
-				'close' => ']]',
-				'multiline' => false,
-				'processor' => 'linkProcessor'
-			),
-			array(
-				'open' => '[',
-				'close' => ']',
-				'multiline' => false,
-				'processor' => 'macroProcessor'
-			),
-			array(
-				'open' => '@',
-				'close' => '@',
-				'multiline' => false,
-				'processor' => 'textProcessor'
-			)
-		), $s_result);
-		$plainTemp = '';
-		for($j=0;$j<mb_strlen($line);$j++){
-			$extImgPattern = '/(https?:\\/\\/[^ \\n]+(?:\\??.)(?:'.implode('|',$options['allowedExternalImageExts']).'))(\\?[^ \n]+|)/i';
-			$extImgOptionPattern = '/[&?]((width|height|align)=(left|center|right|[0-9]+(?:%|px|)))/';
-			if(str_starts_with(substr($line, $j),'http') && preg_match($extImgPattern, $line, $matches) && strpos($line,$matches[0]) === 0){
-				$imgUrl = $matches[1];
-				$optionsString = $matches[2];
-				$optionMatches = preg_match_all($extImgOptionPattern, $optionsString);
-				if (!is_array($optionMatches[1])) $optionMatches = array(null, []);
-				$styleOptions = [];
-				for($k=1;$k<count($optionMatches[1]);$k++){
-					$styleOptions[$optionMatches[1][$k]] = $optionMatches[2][$k];
-				}
-				if(strlen($plainTemp) !== 0){
-					array_push($result, array('name' => 'plain', 'text' => $plainTemp));
-					$plainTemp = '';
-				}
-				array_push($result, ['name' => 'external-image', 'style'=> $styleOptions, 'target' => $imgUrl]);
-				$j += mb_strlen($matches[0]) -1;
-				continue;
-			}else{
-				$nj = $j;
-				$matched = false;
-				for($k=0;$k<count($singleBrackets);$k++){
-					$bracket = $singleBrackets[$k];
-					$temp = null;
-					$innerStrLen = null;
-					if(str_starts_with(substr($line,$j),$bracket['open']) && ($temp = bracketParser($line, $nj, $bracket, fn($v) => $nj = $v, fn($proc, $args) => $this->$proc($args[1], $args[2]), fn($v) => $innerStrLen = $v))){
-						if(strlen($plainTemp) !== 0){
-							array_push($result, ['name' => 'plain', 'text' => $plainTemp]);
-							$plainTemp = '';
-						}
-						$result = array_push($result, $temp);
-						$j += $innerStrLen - 1;
-						$matched = true;
-						break;
-					}
-				}
-				if(!$matched){
-					if($line[$j] == '\n'){
-						array_push($result, array('name' => 'plain', 'text' => $plainTemp));
-						$plainTemp = '';
-					}else{
-						$plainTemp .= $line[j];
-					}
-				}
+                // 평문 처리
+		if(strlen($plainTemp) !== 0){
+		    array_push($result, ['name' => 'plain', 'text' => $plainTemp]);
+		    $plainTemp = '';
+		}
+		array_push($result, ['name' => 'external-image', 'style'=> $styleOptions, 'target' => $imgUrl]);
+		$j += mb_strlen($matches[0]) -1;
+		continue;
+	    }else{
+		$nj = $j;
+	        $matched = false;
+
+                // 싱글브라켓 처리
+		foreach ($singleBrackets as $bracket){
+		    $temp = null;
+		    $innerStrLen = null;
+
+                    // 여는 브라켓으로 시작하고 파서가 작동한다면
+		    if(str_starts_with(substr($line,$j),$bracket['open']) && ($temp = $this->bracketParser($line, $nj, $bracket, fn($v) => $nj = $v, fn($proc, $args) => $this->$proc($args[1], $args[2]), fn($v) => $innerStrLen = $v))){
+			if(strlen($plainTemp) !== 0){
+		            array_push($result, ['name' => 'plain', 'text' => $plainTemp]);
+			    $plainTemp = '';
 			}
+			$result = array_push($result, $temp);
+			$j += $innerStrLen - 1;
+			$matched = true;
+			break;
+		    }
 		}
-		if(strlen($plainTemp) != 0) {
-			array_push($result, array('name' => 'plain', 'text' => $plainTemp));
+              
+		if(!$matched){
+                    // 한 줄의 끝
+		    if(substr($line,$j,1) == '\n'){
+			array_push($result, ['name' => 'plain', 'text' => $plainTemp]);
 			$plainTemp = '';
+		    }else{
+			$plainTemp .= substr($line,$j,1);
+		    }
 		}
-		return $result;
+	    }
+	}
+	if(strlen($plainTemp) != 0) {
+	    array_push($result, ['name' => 'plain', 'text' => $plainTemp]);
+	    $plainTemp = '';
+	}
+	return $result;
+    }
+
+    function lineParser($line){
+	$result = [];
+	$headings = [
+	    '/^= (.+) =$/' => 1,
+	    '/^== (.+) ==$/' => 2,
+	    '/^=== (.+) ===$/' => 3,
+	    '/^==== (.+) ====$/' => 4,
+	    '/^===== (.+) =====$/' => 5,
+	    '/^====== (.+) ======$/' => 6
+	];
+
+        // ##으로 시작하는 행: 주석
+	if(str_starts_with($line, '##'))
+            return array(array('name' => 'comment', 'text' => substr($line,2)));
+
+        // =로 시작하는 행: 목차
+	if(str_starts_with($line, '=')){
+	    foreach($headings as $patternString){
+	        if(preg_match($patternString, $line, $hd_m)){
+		    $level = $headings[$patternString];
+		    return [['name' => 'heading-start', 'level' => $level], ['name' => 'wikitext', 'treatAsBlock' => true, 'text' => $hd_m[1]], ['name' => 'heading-end']];
+		}
+	    }
 	}
 
-	function lineParser($line){
-		$result = array();
-		$headings = array(
-			'/^= (.+) =$/' => 1,
-			'/^== (.+) ==$/' => 2,
-			'/^=== (.+) ===$/' => 3,
-			'/^==== (.+) ====$/' => 4,
-			'/^===== (.+) =====$/' => 5,
-			'/^====== (.+) ======$/' => 6
-		);
-
-		if(str_starts_with($line, '##'))
-		    return array(array('name' => 'comment', 'text' => substr($line,2)));
-
-		if(str_starts_with($line, '=')){
-			foreach($headings as $patternString){
-				if(preg_match($patternString, $line, $hd_m)){
-					$level = $headings[$patternString];
-					return array(array('name' => 'heading-start', 'level' => $level), array('name' => 'wikitext', 'treatAsBlock' => true, 'text' => $hd_m[1]), array('name' => 'heading-end'));
-				}
-			}
-		}
-
-		if(!preg_match('/[^-]/', $line) && strlen($line) >= 4 && strlen($line) <= 10){
-			return array(array('name' => 'horizontal-line'));
-		}
-
-		if(strlen($line) !=0)
-		    return array(array('name' => 'paragraph-start'), blockParser($line), array('name' => 'paragraph-end'));
-		else
-		    return array();
+        // 행이 -로 시작하고, 그 길이가 4자이상 10자이하일때: 수평선
+	if(!preg_match('/[^-]/', $line) && strlen($line) >= 4 && strlen($line) <= 10){
+	    return [['name' => 'horizontal-line']];
 	}
+
+        // 행 길이가 0이 아닐 때
+	if(strlen($line) !=0)
+	    return [['name' => 'paragraph-start'], blockParser($line), ['name' => 'paragraph-end']];
+	else
+	    return array();
+    }
 	
-	function bracketParser($wikitext, $pos, $bracket, $setpos, $callProc, $matchLenCallback=null){
-		$cnt = 0;
-		$done = false;
-		for($i=$pos;$i<mb_strlen($wikitext);$i++){
-			if(str_starts_with(substr($wikitext, $i), $bracket['open']) && !($bracket['open'] == $bracket['close'] && $cnt > 0)){
-				$cnt++;
-				$done = true;
-				$i += strlen($bracket['open']) - 1;
-			} elseif(str_starts_with(substr($wikitext, $i), $bracket['close'])){
-				$cnt--;
-				$i += strlen($bracket['close']) - 1;
-			} elseif(!$bracket['multiline'] && strpos($wikitext,$i) === '\n')
-				return null;
+    function bracketParser($wikitext, $pos, $bracket, $setpos, $callProc, $matchLenCallback=null){
+        $cnt = 0;
+	$done = false;
+
+	for($i=$pos;$i<mb_strlen($wikitext);$i++){
+            // 여는괄호로 시작하고, (여는괄호가 닫는괄호랑 모양이 다르고, 열린 괄호가 있을 때)
+	    if(str_starts_with(substr($wikitext, $i), $bracket['open']) && !($bracket['open'] == $bracket['close'] && $cnt > 0)){
+	        $cnt++;
+		$done = true;
+		$i += strlen($bracket['open']) - 1;
+	    } elseif(str_starts_with(substr($wikitext, $i), $bracket['close'])){
+		$cnt--;
+		$i += strlen($bracket['close']) - 1;
+	    } elseif(!$bracket['multiline'] && strpos($wikitext,$i) === '\n')
+	        return null;
 			
 			if($cnt == 0 && $done){
 				$innerString = substr($wikitext, $pos + strlen($bracket['open']), $i - strlen($bracket['close']) + 1);
@@ -254,8 +270,8 @@ class NamuMark{
 	function blockquoteParser($wikitext, $pos, $setpos){
 		$temp = array();
 		$result = array();
-		for($i=$pos;$i<mb_strlen($wikitext);$i=seekEOL($wikitext, $i)+1){
-			$eol = seekEOL($wikitext, $i);
+		for($i=$pos;$i<mb_strlen($wikitext);$i=$this->seekEOL($wikitext, $i)+1){
+			$eol = $this->seekEOL($wikitext, $i);
 			if(!str_starts_with(substr($wikitext, $i), '>'))
 				break;
 			preg_match('/^>+/', substr($wikitext,$i), $bq_match);
@@ -363,12 +379,13 @@ class NamuMark{
 				$level = $i - $lineStart;
 				$matched = false;
 				$quit = false;
-				$eol = seekEOL($wikitext, $i);
+				$eol = $this->seekEOL($wikitext, $i);
 				$innerString = substr($wikitext, $i, $eol);
-				foreach($listTags as $j){
+				for($k=0; $k<count($listTags); $k++){
+                                        $j = array_keys($listTags)[$k];
 					$listTagInfo = $listTags[$j];
 					$innerString = substr($wikitext, $i + strlen($j), $eol);
-					preg_match('/'.preg_replace('/\*/g', '\\*', preg_replace('/\./g', '\\.', $j)).'#([0-9]+)/', substr($wikitext, $i), $startNoSpecifiedPattern);
+					preg_match('/'.preg_replace('/\*/', '\\*', preg_replace('/\./', '\\.', $j)).'#([0-9]+)/', substr($wikitext, $i), $startNoSpecifiedPattern);
 					if(str_starts_with(substr($wikitext, $i), $j)){
 						if($isList === null)
 							$isList = true;
@@ -412,7 +429,7 @@ class NamuMark{
 			$result = null;
 			$setpos = null;
 		}else{
-			$result = finishTokens($result);
+			$result = $this->finishTokens($result);
 			$setpos($i - 1);
 		}
 		return $result;
@@ -531,7 +548,7 @@ class NamuMark{
 				if($strpos($match) != 0)
 					break;
 				$optionContent = $match[1];
-				$pO = parseOptionBracket($optionContent);
+				$pO = $this->parseOptionBracket($optionContent);
 				$colOptions_set = $pO['colOptions_set'];
 				$tableOptions_set = $pO['tableOptions_set'];
 				$colspan_add = $pO['colspan_add'];
@@ -865,16 +882,7 @@ class NamuMark{
 					return array(array('name' => 'wikitext', 'parseFormat' => true, 'text' => $this->defaultOptions['includeParameters'][$text]));
 				else
 					return null;
-		}
-		return array(array('name' => 'plain', 'text' => $type.$text.$type));
-	}
-
-    	function parse() { $this->doParse(); }
-        function setIncluded() { $this->defaultOptions['included'] = true;}
-	function setIncludeParameters($paramsObj) { $this->defaultOptions['includeParameters'] = $paramsObj; }
-	function setRenderer($r = null, $o = null){
-		if($r !==null) $this->rendererClass = $r;
-		if($o !==null) $this->rendererOptions = $o;
-		return;
-	}
+	    }
+	return array(array('name' => 'plain', 'text' => $type.$text.$type));
+    }
 }
