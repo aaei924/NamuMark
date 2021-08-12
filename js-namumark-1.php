@@ -644,9 +644,10 @@ class NamuMark{
             return null;
         
     }
-    function closureProcessor($text, $type)
+    function closureProcessor($text, $type) {
         return array(array('name' => 'closure-start'), array('name' => 'wikitext', 'parseFormat' => true, 'text' => $text), array('name' => 'closure-end'));
-    
+    }
+
     function linkProcessor($text, $type){
         $href = explode('|', $text);
         if(preg_match('/^https?:\/\//', $text)){
