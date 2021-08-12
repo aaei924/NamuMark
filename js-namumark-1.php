@@ -236,31 +236,31 @@ class NamuMark{
             '/^====== (.+) ======$/' => 6
         ];
 
-            // ##으로 시작하는 행: 주석
+        // ##으로 시작하는 행: 주석
         if(str_starts_with($line, '##'))
-                return array(array('name' => 'comment', 'text' => iconv_substr($line,2)));
+            return array(array('name' => 'comment', 'text' => iconv_substr($line,2)));
 
-            // =로 시작하는 행: 목차
+        // =로 시작하는 행: 목차
         if(str_starts_with($line, '=')){
             foreach($headings as $patternString){
                 if(preg_match($patternString, $line, $hd_m)){
-                $level = $headings[$patternString];
-                return [['name' => 'heading-start', 'level' => $level], ['name' => 'wikitext', 'treatAsBlock' => true, 'text' => $hd_m[1]], ['name' => 'heading-end']];
-            }
+                    $level = $headings[$patternString];
+                    return [['name' => 'heading-start', 'level' => $level], ['name' => 'wikitext', 'treatAsBlock' => true, 'text' => $hd_m[1]], ['name' => 'heading-end']];
+                }
             }
         }
 
-            // 행이 -로만 되어 있고, 그 길이가 4자이상 10자이하일때: 수평선
+        // 행이 -로만 되어 있고, 그 길이가 4자이상 10자이하일때: 수평선
         $l_strlen = strlen($line);
-        if(!preg_match('/[^-]/', $line) && $l_strlen >= 4 && $l_strlen <= 10){
+        if(!preg_match('/[^-]/', $line) && $l_strlen >= 4 && $l_strlen <= 10)
             return [['name' => 'horizontal-line']];
-        }
+        
 
-            // 행 길이가 0이 아닐 때
+        // 행 길이가 0이 아닐 때
         if(strlen($line) !== 0)
             return [['name' => 'paragraph-start'], blockParser($line), ['name' => 'paragraph-end']];
         else
-            return array();
+            return [];
     }
     
     function bracketParser($wikitext, $pos, $bracket, $setpos, $callProc, $matchLenCallback=null){
@@ -278,9 +278,9 @@ class NamuMark{
                 // 열린 괄호 수 -1
                 --$cnt;
                 $i += strlen($bracket['close']) - 1;
-            } elseif(!$bracket['multiline'] && iconv_substr($wikitext,$i,1) === '\n'){
+            } elseif(!$bracket['multiline'] && iconv_substr($wikitext,$i,1) === '\n')
                 return null;
-            }
+            
 
             if($cnt === 0 && $done){
                 $innerString = iconv_substr($wikitext, $pos + strlen($bracket['open']), $i - strlen($bracket['close']) + 1);
@@ -318,14 +318,14 @@ class NamuMark{
                 $_clvcalc = $curLevel - $curTemp['level'];
                 for($i=0; $i<$_clvcalc; $i++)
                     array_push($result, array('name' => 'blockquote-end'));
-            } else{
+            } else
                 array_push($result, array('name' => 'new-line'));
-            }
+            
             array_push($result, array('name' => 'wikitext', 'parseFormat' => true, 'text' => $curTemp['line']));
         }
         array_push($result, array('name' => 'blockquote-end'));
         $setpos($i-1);
-                return $result;
+        return $result;
     }
     function finishTokens($tokens){
         $result = array();
@@ -338,7 +338,7 @@ class NamuMark{
                 $_lv = ($prevWasList)?$prevListLevel:$prevIndentLevel;
                 for($j=0; $j<$_lv; $j++)
                     ($prevWasList)? $_leie = 'list-end':$_leie = 'indent-end';
-                    array_push($result, array('name' => $_leie));
+                array_push($result, array('name' => $_leie));
                 if($prevWasList) $prevListLevel = 0;
                 else $prevIndentLevel = 0;
             }
@@ -415,7 +415,7 @@ class NamuMark{
                 $innerString = iconv_substr($wikitext, $i, $eol);
                 $_ltcount = count($listTags);
                 for($k=0; $k<$_ltcount; $k++){
-                                        $j = array_keys($listTags)[$k];
+                    $j = array_keys($listTags)[$k];
                     $listTagInfo = $listTags[$j];
                     $innerString = iconv_substr($wikitext, $i + strlen($j), $eol);
                     preg_match('/'.preg_replace('/\*/', '\\*', preg_replace('/\./', '\\.', $j)).'#([0-9]+)/', iconv_substr($wikitext, $i), $startNoSpecifiedPattern);
@@ -431,9 +431,9 @@ class NamuMark{
                             $startNo = intval($startNoSpecifiedPattern[1]);
                             $innerString = preg_replace('/^#[0-9]+/', '', $innerString);
                             array_push($result, array('name' => 'list-item-temp', 'listType' => $listTagInfo, 'level' => $level, 'startNo' => $startNo, 'wikitext' => $innerString));
-                        } else {
+                        } else
                             array_push($result, array('name' => 'list-item-temp', 'listType' => $listTagInfo, 'level' => $level, 'wikitext' => $innerString));
-                        }
+                        
                         $i = $eol;
                         $lineStart = $eol + 1;
                         break;
@@ -444,9 +444,9 @@ class NamuMark{
                     break;
                 }
                 if(!$matched){
-                    if($isList === null){
+                    if($isList === null)
                         $isList = false;
-                    } elseif($isList) {
+                    elseif($isList) {
                         $i = $lineStart;
                         break;
                     }
@@ -491,12 +491,12 @@ class NamuMark{
             }
         } elseif(str_starts_with($optionContent, 'table ')) {
             $tableOptionContent = substr($optionContent, 6);
-            $tableOptionPatterns = array(
+            $tableOptionPatterns = [
                 'align' => '/^align=(left|center|right)$/',
                 'background-color' => '/^bgcolor=(#[a-zA-Z0-9]{3,6}|[a-zA-Z]+)$/',
                 'border-color' => '/^bordercolor=(#[a-zA-Z0-9]{3,6}|[a-zA-Z]+)$/',
                 'width' => '/^width=([0-9]+(?:in|pt|pc|mm|cm|px))$/'
-            );
+            ];
             foreach($tableOptionPatterns as $optionName){
                 if(preg_match($tableOptionPatterns[$optionName], $tableOptionContent, $t_top)){
                     $tableOptions[$optionName] = $t_top[1];
@@ -520,7 +520,7 @@ class NamuMark{
                     $colOptions['text-align'] = $optionContent;
                     $matched = true;
                 }
-                else
+                else {
                     foreach($paramlessCellOptions as $optionName){
                         if(!preg_match($paramlessCellOptions[$optionName], $optionContent, $_prg_rop))
                             continue;
@@ -530,6 +530,7 @@ class NamuMark{
                             $colOptions[$optionName] = $_prg_rop[1];
                         $matched = true;
                     }
+                }
             }
         }
         return array('colspan_add' => $colspan, 'rowspan_add' => $rowspan, 'colOptions_set' => $colOptions, 'rowOptions_set' => $rowOptions, 'tableOptions_set' => $tableOptions, 'matched' => $matched);
@@ -540,9 +541,9 @@ class NamuMark{
             $caption = iconv_substr($wikitext, $pos + 1, iconv_strpos($wikitext, '|', $pos + 2));
             $pos = iconv_strpos($wikitext, '|', $pos + 1) + 1;
             // echo $caption;
-        } else {
+        } else
             $pos += 2;
-        }
+        
         $cols = explode('||', iconv_substr($wikitext, $pos));
         $rowno = 0;
         $hasTableContent = false;
@@ -557,9 +558,9 @@ class NamuMark{
         foreach ($cols as $col) {
             $curColOptions = array();
             $rowOption = array();
-            if(str_starts_with($col, '\n') && iconv_strlen($col) > 1){
+            if(str_starts_with($col, '\n') && iconv_strlen($col) > 1)
                 break;
-            }
+            
             if($col == '\n'){
                 $table[++$rowno] = array();
                 continue;
@@ -617,9 +618,9 @@ class NamuMark{
         $_tbcount = count($table);
         foreach($table as $_te){
             $rowOption = array();
-            foreach($_te as $_tee){
+            foreach($_te as $_tee)
                 $rowOption = array_merge($rowOption, $_te['rowOption']);
-            }
+            
             array_push($rowOption, $rowOption);
         }
                    
@@ -639,13 +640,13 @@ class NamuMark{
         if($hasTableContent){
             $setpos(iconv_strlen($pos + implode('||', array_slice($cols, 0, $i))) + 1);
             return $result;
-        }else{
+        }else
             return null;
-        }
+        
     }
-    function closureProcessor($text, $type){
+    function closureProcessor($text, $type)
         return array(array('name' => 'closure-start'), array('name' => 'wikitext', 'parseFormat' => true, 'text' => $text), array('name' => 'closure-end'));
-    }
+    
     function linkProcessor($text, $type){
         $href = explode('|', $text);
         if(preg_match('/^https?:\/\//', $text)){
@@ -684,9 +685,9 @@ class NamuMark{
                 $pattern = '/[&?]?(^[=]+)=([^\&]+)/g';
                 $match = null;
                 while(preg_match($pattern, $href[1], $match)){
-                    if(($match[1] === 'width' || $match[1] === 'height') && preg_match('/^[0-9]$/', $match[2])) {
+                    if(($match[1] === 'width' || $match[1] === 'height') && preg_match('/^[0-9]$/', $match[2]))
                         $match[2] = $match[2].'px';
-                    }
+                    
                     $fileOpts[$match[1]] = $match[2];
                     $haveOpts = true;
                 }
@@ -704,9 +705,9 @@ class NamuMark{
                 ));
             }
         } else {
-            if(str_starts_with($href[0], ' ') || str_starts_with($href[0], ':')){
+            if(str_starts_with($href[0], ' ') || str_starts_with($href[0], ':'))
                 $href[0] = iconv_substr($href[0], 1);
-            }
+            
             if(count($href) > 1){
                 return array(array(
                     'name' => 'link-start',
@@ -825,10 +826,7 @@ class NamuMark{
             }
         } elseif (preg_match('/^#([A-Fa-f0-9]{3,6}) (.*)$/', $text, $matches)){
             if(iconv_strlen($matches[1]) === 0 && iconv_strlen($matches[2]) === 0)
-                return array([
-                    'name' => 'plain',
-                    'text' => $text
-                ]);
+                return array(['name' => 'plain','text' => $text]);
             return array([
                 'name' => 'font-color-start',
                 'color' => $matches[1]
@@ -874,15 +872,15 @@ class NamuMark{
                 return array(['name' => $styles[$type].'-start'],['name' => 'wikitext', 'parseFormat' => true, 'text' => $text], ['name' => $styles[$type].'-end']);
                 break;
             case '{{{':
-                if(str_starts_with($text, '#!html')){
+                if(str_starts_with($text, '#!html'))
                     return array(['name' => 'unsafe-plain', 'text' => iconv_substr($text, 6)]);
-                } elseif (preg_match('/^#([A-Fa-f0-9]{3,6}) (.*)$/', $text, $matches)){
+                elseif (preg_match('/^#([A-Fa-f0-9]{3,6}) (.*)$/', $text, $matches)){
                     if(iconv_strlen($matches[1]) === 0 && iconv_iconv_strlen($matches[2]) === 0)
                         return array(['name' => 'plain','text' => $text]);
                     return array(['name' => 'font-color-start','color' => $matches[1]], ['name' => 'wikitext','parseFormat' => true,'text' => $matches[2]], ['name' => 'font-color-end']);
-                } elseif (preg_match('/^\+([1-5]) (.*)$/', $text, $matches)) {
+                } elseif (preg_match('/^\+([1-5]) (.*)$/', $text, $matches))
                     return array(['name' => 'font-size-start','color' => $matches[1]], ['name' => 'wikitext','parseFormat' => true,'text' => $matches[2]], ['name' => 'font-size-end']); 
-                }
+                
                 return array(['name' => 'monoscape-font-start','pre' => true], ['name' => 'plain','text' => iconv_substr($text, 1)], ['name' => 'monoscape-font-end']);
             case '@':
                 if(!$this->defaultOptions['included'])
@@ -920,17 +918,17 @@ class NamuMark{
         $this->headingCount = 0;
         $this->lastListOrdered = [];
         $this->wasPreMono = false;
-    $this->processTokens($tokens);
-    return $this->HTMLOutPut;
+        $this->processTokens($tokens);
+        return $this->HTMLOutPut;
     }
     public function processTokens($tset){
         foreach($tset as $v) {
-                if($v['name'] !== "wikitext")
-                    $this->processToken($v);
-                elseif($v['parseFormat'] || $v['treatAsBlock'])
-                    $this->processTokens($this->blockParser($v['text']));
-                elseif($v['treatAsLine'])
-                    $this->processTokens($this->lineParser($v['text']));
+            if($v['name'] !== "wikitext")
+                $this->processToken($v);
+            elseif($v['parseFormat'] || $v['treatAsBlock'])
+                $this->processTokens($this->blockParser($v['text']));
+            elseif($v['treatAsLine'])
+                $this->processTokens($this->lineParser($v['text']));
         }
     }
     
@@ -1065,12 +1063,12 @@ class NamuMark{
                         if(count($i['options']) === 0){
                             $this->appendResult()('<span class="wikitext-syntax-error">오류 : youtube 동영상 ID가 제공되지 않았습니다!</span>');
                         } elseif (count($i['options']) >= 1) {
-                            if(is_string($i['options'][0]))
+                            if(is_string($i['options'][0])){
                                 if(count($i['options']) == 1)
                                     $this->appendResult('<iframe src="//www.youtube.com/embed/'.$i['options'][0].'"></iframe>');
                                 else
                                     $this->appendResult('<iframe src="//www.youtube.com/embed/'.$i['options'][0].'" style="'.$this->ObjToCssString(array_slice($i['options'], 1)).'"></iframe>');
-                            else
+                            }else
                                 $this->appendResult('<span class="wikitext-syntax-error">오류 : youtube 동영상 ID는 첫번째 인자로 제공되어야 합니다!</span>');
                         }
                         break;
@@ -1210,24 +1208,24 @@ class NamuMark{
         if($this->isFootnoteNow) {
             $this->footnotes[count($this->footnotes) - 1] .= (is_string($value))? $value: strval($value);
             return;
-        } elseif($this->isHeadingNow) {
+        } elseif($this->isHeadingNow)
             $this->headings[count($this->headings) - 1] .= (is_string($value))? $value: strval($value);
-        }
+        
         if(count($this->HTMLOutPut) === 0)
             array_push($this->HTMLOutPut, $value);
         else {
-            if(is_string($value) && is_string($this->HTMLOutPut[count($this->HTMLOutPut)-1])){
+            if(is_string($value) && is_string($this->HTMLOutPut[count($this->HTMLOutPut)-1]))
                 $this->HTMLOutPut[count($this->HTMLOutPut)-1] .= $value;
-            } else {
+            else
                 array_push($this->HTMLOutPut, $value);
-            }
+            
         }
     }
     private function ObjToCssString($obj) {
         $styleString = '';
-        foreach($obj as $name){
+        foreach($obj as $name)
             $styleString .= $name.':'.$obj[$name].'; ';
-        }
+        
         return iconv_substr($styleString, 0, iconv_strlen($styleString) - 1);
     }
 }
