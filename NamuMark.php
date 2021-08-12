@@ -16,14 +16,6 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-//$t = file_get_contents('../raw.txt');
-$t = 
-" * list
- ㅁㄴㅇㄹ
-  ㅁㄴㅇㄹ
-ㅁㄴㅇㄹ";
-$NM = new NamuMark($t);
-echo json_encode($NM->parse(), JSON_UNESCAPED_UNICODE);
 class NamuMark{
     public function __construct($txt){
         $this->wikitext = $txt;
