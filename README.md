@@ -16,6 +16,7 @@ $NM->category; // 분류 목록
 ```
 
 ## 참고사항
+### 수식
 파서 상에는 수식 처리 영역이 없어 수식(TeX) 문법 지원을 위해서는 [KaTeX](https://github.com/Khan/KaTeX) 라이브러리가 필요합니다.
 
 다음 코드를 HTML 영역의 <head> 태그 안에 붙여 넣으시면 됩니다.
@@ -33,4 +34,36 @@ $NM->category; // 분류 목록
     });
   });
 </script>
+```
+
+
+### 목차
+목차 접힘을 구현하기 위해서는 HTML 상에 다음 코드가 필요합니다.
+```html
+<script>
+document.querySelectorAll('.nm-cb').forEach(c => {
+    c.addEventListener('click', (e) => e.cancelBubble=true);
+});
+document.querySelectorAll('.hidden-trigger').forEach(h => {
+    h.addEventListener('click', () => {
+        var at = h.getAttribute('id');
+        var c = document.getElementById('content-'+at);
+        if(document.getElementById(at).getAttribute('data-pressdo-toc-fold') == 'hide'){
+            document.getElementById(at).setAttribute('data-pressdo-toc-fold', 'show');
+            c.setAttribute('data-pressdo-toc-fold', 'show');
+        }else{
+            document.getElementById(at).setAttribute('data-pressdo-toc-fold', 'hide');
+            c.setAttribute('data-pressdo-toc-fold', 'hide');
+        }
+    })
+});
+</script>
+<style>
+[data-pressdo-navfunc][data-pressdo-toc-fold=hide]{
+  display:none;
+}
+.wiki-heading[data-pressdo-toc-fold=hide]{
+  opacity:.5;
+}
+</style>
 ```
