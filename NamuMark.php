@@ -87,72 +87,99 @@ class NamuMark {
                 'close' => '}}}',
                 'multiline' => true,
                 'processor' => [$this,'renderProcessor']
-                        ]
+            ]
         ];
 
         $this->single_bracket = [
-            array(
+            [
                 'open'    => '{{{#!wiki',
                 'close' => '}}}',
                 'multiline' => true,
-                'processor' => array($this,'renderProcessor')),
-            array(
+                'processor' => [$this,'renderProcessor']
+            ],
+            [
                 'open'    => '{{{',
                 'close' => '}}}',
                 'multiline' => false,
-                'processor' => array($this,'textProcessor')),
-            array(
+                'processor' => [$this,'textProcessor']
+            ],
+            [
                 'open'    => '[[',
                 'close' => ']]',
                 'multiline' => false,
-                'processor' => array($this,'linkProcessor')),
-            array(
+                'processor' => [$this,'linkProcessor']
+            ],
+            [
                 'open'    => '[',
                 'close' => ']',
                 'multiline' => false,
-                'processor' => array($this,'macroProcessor')),
+                'processor' => [$this,'macroProcessor']
+            ],
 
-            array(
+            [
                 'open'    => '\'\'\'',
                 'close' => '\'\'\'',
                 'multiline' => false,
-                'processor' => array($this,'textProcessor')),
-            array(
+                'processor' => [$this,'textProcessor']
+            ],
+            [
                 'open'    => '\'\'',
                 'close' => '\'\'',
                 'multiline' => false,
-                'processor' => array($this,'textProcessor')),
-            array(
+                'processor' => [$this,'textProcessor']
+            ],
+            [
                 'open'    => '**',
                 'close' => '**',
                 'multiline' => false,
-                'processor' => array($this,'textProcessor')),
-            array(
+                'processor' => [$this,'textProcessor']
+            ],
+            [
                 'open'    => '~~',
                 'close' => '~~',
                 'multiline' => false,
-                'processor' => array($this,'textProcessor')),
-            array(
+                'processor' => [$this,'textProcessor']
+            ],
+            [
                 'open'    => '--',
                 'close' => '--',
                 'multiline' => false,
-                'processor' => array($this,'textProcessor')),
-            array(
+                'processor' => [$this,'textProcessor']
+            ],
+            [
                 'open'    => '__',
                 'close' => '__',
                 'multiline' => false,
-                'processor' => array($this,'textProcessor')),
-            array(
+                'processor' => [$this,'textProcessor']
+            ],
+            [
                 'open'    => '^^',
                 'close' => '^^',
                 'multiline' => false,
-                'processor' => array($this,'textProcessor')),
-            array(
+                'processor' => [$this,'textProcessor']
+            ],
+            [
                 'open'    => ',,',
                 'close' => ',,',
                 'multiline' => false,
-                'processor' => array($this,'textProcessor'))
-            ];
+                'processor' => [$this,'textProcessor']
+            ]
+        ];
+
+        $this->cssColors = [
+            'black','gray','grey','silver','white','red','maroon','yellow','olive','lime','green','aqua','cyan','teal','blue','navy','magenta','fuchsia','purple',
+            'dimgray','dimgrey','darkgray','darkgrey','lightgray','lightgrey','gainsboro','whitesmoke',
+            'brown','darkred','firebrick','indianred','lightcoral','rosybrown','snow','mistyrose','salmon','tomato','darksalmon','coral','orangered','lightsalmon',
+            'sienna','seashell','chocolate','saddlebrown','sandybrown','peachpuff','peru','linen','bisque','darkorange','burlywood','anaatiquewhite','tan','navajowhite',
+            'blanchedalmond','papayawhip','moccasin','orange','wheat','oldlace','floralwhite','darkgoldenrod','goldenrod','cornsilk','gold','khaki','lemonchiffon',
+            'palegoldenrod','darkkhaki','beige','ivory','lightgoldenrodyellow','lightyellow','olivedrab','yellowgreen','darkolivegreen','greenyellow','chartreuse',
+            'lawngreen','darkgreen','darkseagreen','forestgreen','honeydew','lightgreen','limegreen','palegreen','seagreen','mediumseagreen','springgreen','mintcream',
+            'mediumspringgreen','mediumaquamarine','aquamarine','turquoise','lightseagreen','mediumturquoise','azure','darkcyan','darkslategray','darkslategrey',
+            'lightcyan','paleturquoise','darkturquoise','cadetblue','powderblue','lightblue','deepskyblue','skyblue','lightskyblue','steelblue','aliceblue','dodgerblue',
+            'lightslategray','lightslategrey','slategray','slategrey','lightsteelblue','comflowerblue','royalblue','darkblue','ghostwhite','lavender','mediumblue',
+            'midnightblue','slateblue','darkslateblue','mediumslateblue','mediumpurple','rebeccapurple','blueviolet','indigo','darkorchid','darkviolet','mediumorchid',
+            'darkmagenta','plum','thistle','violet','orchid','mediumvioletred','deeppink','hotpink','lavenderblush','palevioletred','crimson','pink','lightpink'
+        ];
 
         $this->macro_processors = [];
 
@@ -210,7 +237,8 @@ class NamuMark {
             if($now == "\\"){
                 ++$i;
                 $line .= self::getChar($text,$i);
-                continue;
+                ++$i;
+                $now = self::getChar($text,$i);
             }
             
             if($line == '' && $now == ' ' && $list = $this->listParser($text, $i)) {
@@ -349,227 +377,320 @@ class NamuMark {
     }
 
     protected function tableParser($text, &$offset) {
-        $len = strlen($text);
+        /*
+        Parser Rebuilt
+        매개변수 정보:
+        text: 전체 텍스트
+        offset: 오프셋
+        
+        ||<rowbgcolor=#00a495><rowcolor=#fff><table bgcolor=#FFF,#1F2023> 문법 || 출력 ||
+        ||{{{#!wiki style=""
+        {{{
+        || 테이블 || 테이블 ||
+        || 셀 || 셀 ||}}}
+        }}}||{{{#!wiki style=""
+        || 테이블 || 테이블 ||
+        || 셀 || 셀 ||}}}||
+        
+        - 텍스트를 ||로 분리
+        - 첫 칸이 |로 시작 >
+            - 캡션 시작
+            - |이 나올 때까지 텍스트 처리
+            - |이 나오면 캡션 끝
+            - 이후 테이블 파싱
+        - 아니면 테이블 파싱
+        
+        * DOM 구조
+        {
+            table:[
+                'caption': 'caption',
+                'colstyles' => []
+                'rows' => [
+                    [
+                        'style' => ['style=style'],
+                        'cols' => [
+                            ['text' => blockParser, 'style' => 'style=style', 'rowspan' => 1],
+                            'span',
+                            [...]
+                        ]
+                    ],
+                    [...],
+                    [...],
+                    [...]
+                ]
+            ]
 
-        $tableInnerStr = '';
+        }
+
+        */
+        $token = ['caption' => null, 'colstyle' => [], 'rows' => []];
         $tableStyleList = array();
         $caption = '';
-        // 다음행 첫자
-        for($i=$offset;$i<$len;$i=self::seekEndOfLine($text, $i)+1) {
-            $now = self::getChar($text,$i);
-            $eol = self::seekEndOfLine($text, $i);
-            if(!self::startsWith($text, '||', $i)) {
-                // 행의 처음이 ||가 아님
+        $tableinit = true;
+        $tableattrinit = [];
+        $tableAttr = [];
+        $tableAttrStr = '';
+        $trAttrStr = '';
+        $tableInnerStr = '';
+        $trInnerStr = '';
+        $tdInnerStr = '';
+        $tdAttrStr = '';
+        $text = substr($text, $offset);
+        $i = $offset;
+
+        // caption 파싱은 처음에만
+        if(self::startsWith($text, '|') && !self::startsWith($text, '||') && $tableinit === true) {
+            $caption = explode('|', $text);
+            if(count($caption) < 3)
+                return false;
+            
+            $token['caption'] = $this->blockParser($caption[1]);
+            $hasCaption = true;
+            $tableinit = false;
+
+            $cols = explode('||', implode('|', array_slice($caption, 2)));
+            $cols = array_slice($cols, 0, count($cols) - 1);
+            // 맨 끝만 자르기
+
+            //    (|) (caption content)     (|)
+            $i += 1 + strlen($caption[1]) + 1;
+        }elseif(self::startsWith($text, '||') && $tableinit === true){
+            // 양 끝 자르기
+            $cols = explode('||', $text);
+            if(count($cols) < 3)
+                return false;
+            
+            $cols = array_slice($cols, 1, count($cols) - 2);
+            $hasCaption = false;
+            $tableinit = false;
+            $i += 2;
+        }elseif($tableinit === true){
+            return false;
+        }
+
+        $tdCount = count($cols);
+        if(!isset($rowIndex)) $rowIndex = 0;
+        if(!isset($colIndex)) $colIndex = 0;
+
+        // 칸단위 처리
+        foreach ($cols as $col){
+            if(!isset($token['rows'][$rowIndex]))
+                $token['rows'][$rowIndex] = ['style' => [], 'cols' => []];
+            if(!isset($nextrowspan))
+                $nextrowspan = 0;
+            $rowspan = $nextrowspan;
+            $nextrowspan = 0;
+            $tdAttr = [];
+            // 새로운 tr
+            if($col == "\n"){
+                ++$rowIndex;
+                $i += strlen($col) + 2;
+                $colIndex = 0;
+                continue;
+            }elseif(self::startsWith($col, "\n")){
                 break;
-            }
-            // || 로 시작하는 부분 처리
-            $line = substr($text, $i, $eol-$i);
-            $td = explode('||', $line);
-            $td_cnt = count($td);
-
-            $trInnerStr = '';
-            $simpleColspan = 0;
-            // 가로 칸 처리
-            for($j=1;$j<$td_cnt-1;$j++) {
-                $innerstr = htmlspecialchars_decode($td[$j]);
-
-                // |||| colspan
-                if($innerstr=='') {
-                    $simpleColspan += 1;
-                    continue;
-                } elseif(preg_match('/^\|.*?\|/', $innerstr)) {
-                    // 표 캡션
-                    $caption_r = explode('|', $innerstr);
-                    $caption = '<caption>'.$caption_r[1].'</caption>';
-                    $innerstr = $caption_r[2];
-                }
-
-                $tdAttr = $tdStyleList = array();
-                $trAttr = $trStyleList = array();
+            }elseif($col == ''){
+                $i += 2;
+                // |||| rowspan
+                ++$nextrowspan;
+            }else{
+                $token['colstyle'][$colIndex] = [];
+                $i += strlen($col) + 2;
+                $tdInnerStr = htmlspecialchars_decode($col);
                 
-                if($simpleColspan != 0) {
-                    $tdAttr['colspan'] = $simpleColspan+1;
-                    $simpleColspan = 0;
-                }
-                
+                // cell style
+                if(preg_match('/^<(.+)>/', htmlspecialchars_decode($tdInnerStr), $match)){
+                    $attrs = explode('><', $match[1]);
+                    foreach ($attrs as $attr){
+                        $attr = strtolower($attr);
+                        if(preg_match('/^([^=]*)=([^=]*)$/', $attr, $tbattr)){
+                            // 속성은 최초 설정치가 적용됨
 
-                // 표 스타일 적용
-                while(self::startsWith($innerstr, '<') && !preg_match('/^<[^<]*?>([^<]*?)<\/.*?>/', $innerstr) && !self::startsWithi($innerstr, '<br')) {
-                    $dummy=0;
-                    $prop = $this->bracketParser($innerstr, $dummy, array('open' => '<', 'close' => '>','multiline' => false,'processor' => function($str) { return $str; }));
-                    $prop = preg_replace('/^table([^ ])/', 'table $1', $prop);
-                    $innerstr = substr($innerstr, $dummy+1);
-
-                    switch($prop) {
-                        case '(':
-                            break;
-                        case ':':
-                            $tdStyleList['text-align'] = 'center';
-                            break;
-                        case ')':
-                            $tdStyleList['text-align'] = 'right';
-                            break;
-                        default:
-                            if(self::startsWith($prop, 'table ')) {
-                                // <table style>
-                                $tbprops = explode(' ', $prop);
-                                foreach($tbprops as $tbprop) {
-                                    if(!preg_match('/^([^=]+)=(?|"(.*)"|\'(.*)\'|(.*))$/', $tbprop, $tbprop))
-                                        continue;
-                                    switch($tbprop[1]) {
-                                        case 'align':
-                                            switch($tbprop[2]) {
-                                                case 'center':
-                                                    $tableStyleList['margin-left'] = 'auto';
-                                                    $tableStyleList['margin-right'] = 'auto';
-                                                    break;
-                                                case 'right':
-                                                    $tableStyleList['float'] = 'right';
-                                                    $tableStyleList['margin-left'] = '10px';
-                                                    break;
-                                            }
-                                            break;
-                                        case 'color':
-                                            // + 글씨색 설정 추가
-                                            $tableStyleList['color'] = $tbprop[2];
-                                            break;
-                                        case 'bgcolor':
-                                            $tableStyleList['background-color'] = $tbprop[2];
-                                            break;
-                                        case 'bordercolor':
-                                            $tableStyleList['border'] = '2px solid ';
-                                            $tableStyleList['border'] .= $tbprop[2];
-                                            break;
-                                        case 'width':
-                                            if(is_numeric($tbprop[2]))
-                                                $tbprop[2] .= 'px';
-                                            $tableStyleList['width'] = $tbprop[2];
-                                            break;
-                                        case 'caption':
-                                            $caption = '<caption>'.$tbprop[2].'</caption>';
-                                    }
+                            if(
+                                !in_array(strtr($tbattr[1], ' ', ''), $tableattrinit) && (
+                                    (in_array($tbattr[1], ['tablealign', 'table align']) && in_array($tbattr[2], ['center', 'left', 'right'])) ||
+                                    (in_array($tbattr[1], ['tablewidth', 'table width']) && preg_match('/^-?[0-9.]*(px|%)$/', $tbattr[2])) || 
+                                    (in_array($tbattr[1], ['tablebgcolor', 'table bgcolor', 'tablecolor', 'table color', 'tablebordercolor', 'table bordercolor']) && (in_array($tbattr[2], $this->cssColors) || preg_match('/^#([0-9a-f]{3}|[0-9a-f]{6})$/', $tbattr[2])))
+                                )
+                            ){
+                                // 표 속성
+                                $tdInnerStr = str_replace('<'.$tbattr[0].'>', '', htmlspecialchars_decode($tdInnerStr));
+                                array_push($tableattrinit, strtr($tbattr[1], ' ', ''));
+                                switch(strtr($tbattr[1], ' ', '')){
+                                    case 'tablebgcolor':
+                                        $tbAttrNm = 'background-color';
+                                        break;
+                                    case 'tablecolor':
+                                        $tbAttrNm = 'color';
+                                        break;
+                                    case 'tablebordercolor':
+                                        $tbAttrNm = 'border-color';
+                                        break;
+                                    case 'tablebgcolor':
+                                        $tbAttrNm = 'background-color';
+                                        break;
+                                    case 'tablewidth':
+                                        $tbAttrNm = 'width';
+                                        break;
+                                    default:
+                                        $tbAttrNm = $tbattr[1];
                                 }
-                            }
-                            
-                            // 좌우 및 수직 정렬
-                            elseif(preg_match('/^(\||\-|v|\^)\|?([0-9]+)$/', $prop, $span)) {
-                                if($span[1] == '-') {
-                                    $tdAttr['colspan'] = $span[2];
-                                    break;
-                                }
-                                elseif($span[1] == '|') {
-                                    $tdAttr['rowspan'] = $span[2];
-                                    break;
-                                }
-                                elseif($span[1] == '^') {
-                                    $tdAttr['rowspan'] = $span[2];
-                                    $tdStyleList['vertical-align'] = 'top';
-                                    break;
-                                }
-                                elseif($span[1] == 'v') {
-                                    $tdAttr['rowspan'] = $span[2];
-                                    $tdStyleList['vertical-align'] = 'bottom';
-                                    break;
-                                }
-                            }
-                            elseif(preg_match('/^#(?:([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})|([A-Za-z]+))$/', $prop, $span)) {
-                                // 표 배경색
-                                $tdStyleList['background-color'] = $span[1]?'#'.$span[1]:$span[2];
-                                break;
-                            }
-                            elseif(preg_match('/^([^=]+)=(?|"(.*)"|\'(.*)\'|(.*))$/', $prop, $match)) {
-                                switch($match[1]) {
-                                    // + td, tr 글씨색 설정 추가
-                                    case 'color':
-                                        $tdStyleList['color'] = $match[2];
+                                if(in_array($tbattr[1], ['tablealign', 'table align']))
+                                    $tbClassStr = ' table-'.$tbattr[2];
+                                else
+                                    $tableAttr[$tbAttrNm] = $tbattr[2];
+                            }elseif(
+                                // 개별 행 속성
+                                in_array($tbattr[1], ['rowbgcolor', 'rowcolor']) && 
+                                (in_array($tbattr[2], $this->cssColors) || preg_match('/^#([0-9a-f]{3}|[0-9a-f]{6})$/', $tbattr[2]))
+                            ){
+                                $tdInnerStr = str_replace('<'.$tbattr[0].'>', '', htmlspecialchars_decode($tdInnerStr));
+                                switch($tbattr[1]){
+                                    case 'rowbgcolor':
+                                        $tbAttrNm = 'background-color';
                                         break;
                                     case 'rowcolor':
-                                        $trStyleList['color'] = $match[2];
+                                        $tbAttrNm = 'color';
                                         break;
-                                    case 'bgcolor':
-                                        $tdStyleList['background-color'] = $match[2];
-                                        break;
-                                    case 'rowbgcolor':
-                                        $trStyleList['background-color'] = $match[2];
-                                        break;
-                                    case 'width':
-                                        $tdStyleList['width'] = $match[2];
-                                        break;
-                                    case 'height':
-                                        $tdStyleList['height'] = $match[2];
-                                        break;
+                                    default:
+                                        $tbAttrNm = $tbattr[1];
                                 }
+                                $token['rows'][$rowIndex]['style'][$tbAttrNm] = $tbattr[2];
+                            }elseif(
+                                // 개별 열 속성
+                                in_array($tbattr[1], ['colbgcolor', 'colcolor']) && 
+                                (in_array($tbattr[2], $this->cssColors) || preg_match('/^#([0-9a-f]{3}|[0-9a-f]{6})$/', $tbattr[2]))
+                            ){
+                                $tdInnerStr = str_replace('<'.$tbattr[0].'>', '', htmlspecialchars_decode($tdInnerStr));
+                                switch($tbattr[1]){
+                                    case 'colbgcolor':
+                                        $tbAttrNm = 'background-color';
+                                        break;
+                                    case 'colcolor':
+                                        $tbAttrNm = 'color';
+                                        break;
+                                    default:
+                                        $tbAttrNm = $tbattr[1];
+                                }
+                                $token['colstyle'][$colIndex][$tbAttrNm] = $tbattr[2];
+                            }elseif(
+                                // 개별 셀 속성
+                                (in_array($tbattr[1], ['width', 'height']) && preg_match('/^-?[0-9.]*(px|%)$/', $tbattr[2])) ||
+                                (in_array($tbattr[1], ['color', 'bgcolor']) && (in_array($tbattr[2], $this->cssColors) || preg_match('/^#([0-9a-f]{3}|[0-9a-f]{6})$/', $tbattr[2])))
+                            ){
+                                $tdInnerStr = str_replace('<'.$tbattr[0].'>', '', htmlspecialchars_decode($tdInnerStr));
+                                switch($tbattr[1]){
+                                    case 'bgcolor':
+                                        $tbAttrNm = 'background-color';
+                                        break;
+                                    default:
+                                        $tbAttrNm = $tbattr[1];
+                                }
+                                $tdAttr[$tbAttrNm] = $tbattr[2];
                             }
-                            else
-                                $tdStyleList['background-color'] = $prop;
+                        }elseif(preg_match('/^(-|\|)([0-9]*)$/', $attr, $tbspan)){
+                            $tdInnerStr = str_replace('<'.$tbspan[0].'>', '', htmlspecialchars_decode($tdInnerStr));
+                            // <^|n>
+                            if($tbspan[1] == '-')
+                                $rowspan = $tbspan[2];
+                            elseif($tbspan[1] == '|')
+                                $tdAttr['colspan'] = $tbspan[2];
+                        }elseif(preg_match('/^(\^|v|)\|([0-9]*)$/', $attr, $tbalign)){
+                            $tdInnerStr = str_replace('<'.$tbalign[0].'>', '', htmlspecialchars_decode($tdInnerStr));
+                            // <^|n>
+                            if($tbalign[1] == '^')
+                                $tdAttr['vertical-align'] = 'top';
+                            elseif($tbalign[1] == 'v')
+                                $tdAttr['vertical-align'] = 'bottom';
+                            
+                            $rowspan = $tbalign[2];
+                        }else{
+                            // <:>
+                            switch($attr){
+                                case ':':
+                                    $tdAttr['text-align'] = 'center';
+                                    $tdInnerStr = str_replace('<:>', '', htmlspecialchars_decode($tdInnerStr));
+                                    break;
+                                case '(':
+                                    $tdAttr['text-align'] = 'left';
+                                    $tdInnerStr = str_replace('<(>', '', htmlspecialchars_decode($tdInnerStr));
+                                    break;
+                                case ')':
+                                    $tdAttr['text-align'] = 'right';
+                                    $tdInnerStr = str_replace('<)>', '', htmlspecialchars_decode($tdInnerStr));
+                            }
+                        }
                     }
                 }
+                $thiscol = ['text' => $this->blockParser($tdInnerStr), 'style' => $tdAttr];
 
-                if(empty($tdStyleList['text-align'])) {
-                    // 표 텍스트정렬
-                    if(self::startsWith($innerstr, ' ') && self::endsWith($innerstr, ' '))
-                        $tdStyleList['text-align'] = 'center';
-                    elseif(self::startsWith($innerstr, ' ') && !self::endsWith($innerstr, ' '))
-                        $tdStyleList['text-align'] = 'right';
-                    elseif(!self::startsWith($innerstr, ' ') && self::endsWith($innerstr, ' '))
-                        $tdStyleList['text-align'] = 'left';
-                    else
-                        $tdStyleList['text-align'] = null;
-                }
-
-                $innerstr = trim($innerstr);
-
-                $tdAttr['style'] = '';
-                foreach($tdStyleList as $styleName =>$tdstyleValue) {
-                    if(empty($tdstyleValue))
-                        continue;
-                    $tdAttr['style'] .= $styleName.': '.$tdstyleValue.'; ';
-                }
+                array_push($token['rows'][$rowIndex]['cols'], $thiscol);
                 
-                $trAttr['style'] = '';
-                foreach($trStyleList as $styleName =>$trstyleValue) {
-                    if(empty($trstyleValue))
-                        continue;
-                    $trAttr['style'] .= $styleName.': '.$trstyleValue.'; ';
-                }
-
-                $tdAttrStr = '';
-                foreach($tdAttr as $propName => $propValue) {
-                    if(empty($propValue))
-                        continue;
-                    $tdAttrStr .= ' '.$propName.'="'.str_replace('"', '\\"', $propValue).'"';
-                }
-                
-                if (!isset($trAttrStri)) {
-                    $trAttrStri = true;
-                    $trAttrStr = '';
-                    foreach($trAttr as $propName => $propValue) {
-                        if(empty($propValue))
-                            continue;
-                        $trAttrStr .= ' '.$propName.'="'.str_replace('"', '\\"', $propValue).'"';
+                if($rowspan > 0){
+                    $thiscol['rowspan'] = $rowspan;
+                    while($rowspan > 1){
+                        ++$colIndex;
+                        $token['rows'][$rowIndex]['cols'][$colIndex] = 'span';
+                        --$rowspan;
                     }
                 }
-                $trInnerStr .= '<td'.$tdAttrStr.'><div class="wiki-paragraph">'.$this->blockParser($innerstr).'</div></td>';
+                ++$colIndex;
+                $thiscol = [];
+                $tdInnerStr = '';
             }
-            $tableInnerStr .= !empty($trInnerStr)?'<tr'.$trAttrStr.'>'.$trInnerStr.'</tr>':'';
-            unset($trAttrStri);
         }
-
-        if(empty($tableInnerStr))
-            return false;
-
-        $tableStyleStr = '';
-        foreach($tableStyleList as $styleName =>$styleValue) {
-            if(empty($styleValue))
-                continue;
-            $tableStyleStr .= $styleName.': '.$styleValue.'; ';
+        if($token['caption'] !== null)
+            $tableInnerStr .= '<caption>'.$tk['caption'].'</caption>';
+            
+        foreach ($token['rows'] as $r){
+            if(!is_array($r))
+                var_dump($r);
+            foreach ($r['cols'] as $rc){
+                if($rc == 'span')
+                    continue;
+                if(!empty($rc['style'])){
+                    $rcCount = count($rc['style']);
+                    $rcKeys = array_keys($rc['style']);
+                    for($k=0; $k<$rcCount; ++$k){
+                        if($k !== 0)
+                        $tdAttrStr .= ' ';
+                        $tdAttrStr .= $rcKeys[$k].':'.$rc['style'][$rcKeys[$k]].';';
+                    }
+                }
+                    if(strlen($tdAttrStr) > 0)
+                        $tdAttrStr = ' style="'.$tdAttrStr.'"';
+                    if(isset($rc['rowspan']))
+                        $tdAttrStr .= ' rowspan="'.$rc['rowspan'].'"';
+                    if(isset($rc['colspan']))
+                        $tdAttrStr .= ' colspan="'.$rc['colspan'].'"';
+                    $trInnerStr .= '<td'.$tdAttrStr.'>'.$rc['text'].'</td>';
+                    $tdAttrStr = '';
+            }
+            if(!empty($r['style'])){
+                $attrlen = count($r['style']);
+                $attkeys = array_keys($r['style']);
+                for($k=0; $k<$attrlen; ++$k){
+                    $trAttrStr .= $attkeys[$k].':'.$r['style'][$attkeys[$k]].'; ';
+                }
+            }
+            if(strlen($trAttrStr) > 0)
+                $trAttrStr = ' style="'.$trAttrStr.'"';
+            
+            $tableInnerStr .= '<tr'.$trAttrStr.'>'.$trInnerStr.'</tr>';
+            $trInnerStr = $trAttrStr = '';
         }
-
-        // HTML <table> 태그 생성
-        $tableAttrStr = ($tableStyleStr?' style="'.$tableStyleStr.'"':'');
-        $result = '<div data-pressdo-doc-tablewrap><table data-pressdo-doc-table'.$tableAttrStr.'>'.$caption.$tableInnerStr."</table></div>\n";
-        $offset = $i-1;
-        return $result;
+        
+        $attrlen = count($tableAttr);
+        $attkeys = array_keys($tableAttr);
+        for($k=0; $k<$attrlen; ++$k){
+            $tableAttrStr .= $attkeys[$k].':'.$tableAttr[$attkeys[$k]].'; ';
+        }
+        if(strlen($tableAttrStr) > 0)
+            $tableAttrStr = ' style="'.$tableAttrStr.'"';
+        if(!isset($tbClassStr))
+            $tbClassStr = '';
+        $offset = $i;
+        return '<div class="wiki-table-wrap'.$tbClassStr.'"><table'.$tableAttrStr.'>'.$tableInnerStr.'</table></div>';
     }
 
     // 리스트 생성
@@ -708,7 +829,7 @@ class NamuMark {
                 $RealContent = str_replace($anchor[0], '', $innertext);
                 $result .= '<a id="'.$anchor[1].'"></a><span id="'.trim($RealContent).'">'.$RealContent;
             }else{
-                $result .= '<span id="'.$innertext.'">'.$innertext;
+                $result .= '<span id="'.strip_tags($innertext).'">'.$innertext;
             }
 
             //+ 부분 편집 기능 작업
@@ -1069,6 +1190,7 @@ class NamuMark {
             $paramtxt .= ($csstxt!=''?' style="'.$csstxt.'"':'');
             //return '<a href="'.$this->prefix.'/'.self::encodeURI($category[0]).'" title="'.htmlspecialchars($category[0]).'"><img src="https://namu.wiki/file/'.self::encodeURI($category[0]).'"'.$paramtxt.'></a>';
         }else {
+            // [[:분류:ㅁ]]
             if(self::startsWith($href[0], ':')) {
                 $href[0] = substr($href[0], 1);
                 $c=1;
@@ -1079,6 +1201,20 @@ class NamuMark {
                 $display_txt = explode('#', $href[0])[0];
             }else{
                 $display_txt = (!empty($href[1])?$this->formatParser($href[1]):$href[0]);
+            }
+            
+            //+ [[../../]] ㄱ/ㄴ/ㄷ > ㄱ
+            if(self::startsWith($href[0], '../')){
+                $lv = count(explode('../', $href[0])) - 1;
+                for($i=0; $i<$lv; ++$i){
+                    $ttlvl = explode('/', $this->title);
+                    array_pop($ttlvl);
+                    $href[0] = implode('/', $ttlvl);
+                }
+            }
+            //+ [[/a/b]] ㄱ > ㄱ/ㄴ/ㄷ
+            if(self::startsWith($href[0], '/')){
+                $href[0] = $this->title.$href[0];
             }
 
             $targetUrl = $this->uriset['wiki'].self::encodeURI($href[0]);
@@ -1162,7 +1298,7 @@ class NamuMark {
                     }
                     return '<iframe width="'.(!empty($var['width'])?$var['width']:'640').'" height="'.(!empty($var['height'])?$var['height']:'360').'" src="http://ext.nicovideo.jp/thumb_watch/'.$include[0].'?w='.(!empty($var['width'])?$var['width']:'640').'&h='.(!empty($var['height'])?$var['height']:'360').'" frameborder="0" allowfullscreen></iframe>';
                 }
-                elseif(self::startsWith(strtolower($text), 'kakaotv') && preg_match('/^kakaotv\((.+)\)$/', $text, $include) && $include = $include[1]) {
+                elseif(self::startsWith(strtolower($text), 'kakaotv') && preg_match('/^kakaotv\((.+)\)$/i', $text, $include) && $include = $include[1]) {
                     // 카카오 동영상
                     $include = explode(',', $include);
                     $var = array();
@@ -1174,18 +1310,6 @@ class NamuMark {
                     }
                     return '<iframe width="'.(!empty($var['width'])?$var['width']:'640').'" height="'.(!empty($var['height'])?$var['height']:'360').'" src="https://play-tv.kakao.com/embed/player/cliplink/'.$include[0].'?service=player_share" frameborder="0" allowfullscreen></iframe>';
                 }
-                elseif(self::startsWith($text, 'video') && preg_match('/^video\((.+)\)$/', $text, $include) && $include = $include[1]) {
-                    // + 커스텀 동영상: [video(url)]
-                    $include = explode(',', $include);
-                    $var = array();
-                    foreach($include as $v) {
-                        $v = explode('=', $v);
-                        if(empty($v[1]))
-                            $v[1]='';
-                        $var[$v[0]] = $v[1];
-                    }
-                    return '<iframe width="'.(!empty($var['width'])?$var['width']:'640').'" height="'.(!empty($var['height'])?$var['height']:'360').'" src="'.$include[0].'" frameborder="0" allowfullscreen></iframe>';
-                }
                 elseif(self::startsWithi(strtolower($text), 'age') && preg_match('/^age\((.+)\)$/i', $text, $include) && $include = $include[1]) {
                     // 연령
                     $include = explode('-', $include);
@@ -1196,7 +1320,7 @@ class NamuMark {
                 }
                 elseif(self::startsWithi(strtolower($text), 'anchor') && preg_match('/^anchor\((.+)\)$/i', $text, $include) && $include = $include[1]) {
                     // 앵커
-                    return '';//<a name="'.$include.'"></a>';
+                    return '<a name="'.$include.'"></a>';
                 }
                 elseif(self::startsWithi(strtolower($text), 'dday') && preg_match('/^dday\((.+)\)$/i', $text, $include) && $include = $include[1]) {
                     // D-DAY
@@ -1222,14 +1346,14 @@ class NamuMark {
 
     // TheWiki Parser 일부
     private function textProcessor($otext, $type) {
-        if($type != '{{{')
+        if($type !== '{{{')
             $text = $this->formatParser($otext);
         else
             $text = $otext;
             switch ($type) {
             case '\'\'\'':
                 // 볼드체
-                        return '<strong>'.$text.'</strong>';
+                return '<strong>'.$text.'</strong>';
             case '\'\'':
                 // 기울임꼴
                 return '<em>'.$text.'</em>';
@@ -1237,7 +1361,7 @@ class NamuMark {
             case '~~':
                 // 취소선
                 // + 수평선 적용 안 되는 오류 수정
-                           if(@$this->strikeLine){
+                if(@$this->strikeLine){
                     $text = '';
                 }
                 return '<del>'.$text.'</del>';
@@ -1262,18 +1386,18 @@ class NamuMark {
 #                    echo $html;
                     return $html;
                 }
-                if(preg_match('/^#(?:([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})|([A-Za-z]+)) (.*)$/', $text, $color)) {
+                elseif(preg_match('/^#(?:([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})|([A-Za-z]+)) (.*)$/', $text, $color)) {
                     if(empty($color[1]) && empty($color[2]))
                         return $text;
                     return '<span style="color: '.(empty($color[1])?$color[2]:'#'.$color[1]).'">'.$this->formatParser($color[3]).'</span>';
                 }
-                if(preg_match('/^\+([1-5]) (.*)$/', $text, $size)) {
+                elseif(preg_match('/^\+([1-5]) (.*)$/', $text, $size)) {
                     return '<span class="wiki-size size-'.$size[1].'">'.$this->formatParser($size[2]).'</span>';
                 }
                     // 문법 이스케이프
-                            return '<code data-pressdo-nowiki>' . $text . '</code>';
-                }
-                return $type.$text.$type;
+                return '<code data-pressdo-nowiki>' . $text . '</code>';
+            }
+            return $type.$text.$type;
     }
 
     // 각주 삽입
@@ -1311,17 +1435,22 @@ class NamuMark {
             if($fn['count']>1) {
                 $result .= '['.$fn['id'].'] ';
                 for($i=0;$i<$fn['count'];$i++) {
+                    if(isset($this->lastfnid))
+                        $i += $this->lastfnid;
                     $result .= '<a id="fn-'.htmlspecialchars($fn['id']).'-'.($i+1).'" href="#rfn-'.rawurlencode($fn['id']).'-'.($i+1).'">'.chr(ord('A') + $i).'</a> ';
+                    $this->lastfnid = $i+1;
                 }
             }
             else {
+                if(isset($this->lastfnid))
                 $result .= '<a id="fn-'.htmlspecialchars($fn['id']).'" href="#rfn-'.$fn['id'].'">['.$fn['id'].']</a> ';
+                $this->lastfnid = $fn['id'];
             }
             $result .= $this->blockParser($fn['text'])
                                 .($this->wapRender?'</p>':'</span><br>');
         }
         $result .= $this->wapRender?'':'</ol>';
-        $this->fn = array();
+        //$this->fn = array();
         return $result;
     }
 
