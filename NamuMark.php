@@ -377,52 +377,7 @@ class NamuMark {
     }
 
     protected function tableParser($text, &$offset) {
-        /*
-        Parser Rebuilt
-        매개변수 정보:
-        text: 전체 텍스트
-        offset: 오프셋
-        
-        ||<rowbgcolor=#00a495><rowcolor=#fff><table bgcolor=#FFF,#1F2023> 문법 || 출력 ||
-        ||{{{#!wiki style=""
-        {{{
-        || 테이블 || 테이블 ||
-        || 셀 || 셀 ||}}}
-        }}}||{{{#!wiki style=""
-        || 테이블 || 테이블 ||
-        || 셀 || 셀 ||}}}||
-        
-        - 텍스트를 ||로 분리
-        - 첫 칸이 |로 시작 >
-            - 캡션 시작
-            - |이 나올 때까지 텍스트 처리
-            - |이 나오면 캡션 끝
-            - 이후 테이블 파싱
-        - 아니면 테이블 파싱
-        
-        * DOM 구조
-        {
-            table:[
-                'caption': 'caption',
-                'colstyles' => []
-                'rows' => [
-                    [
-                        'style' => ['style=style'],
-                        'cols' => [
-                            ['text' => blockParser, 'style' => 'style=style', 'rowspan' => 1],
-                            'span',
-                            [...]
-                        ]
-                    ],
-                    [...],
-                    [...],
-                    [...]
-                ]
-            ]
-
-        }
-
-        */
+        //+ Parser Rebuilt
         $token = ['caption' => null, 'colstyle' => [], 'rows' => []];
         $tableStyleList = array();
         $caption = '';
