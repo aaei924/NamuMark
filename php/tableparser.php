@@ -1,3 +1,4 @@
+<?php
 protected function tableParser($text, &$offset) {
         $token = ['caption' => null, 'colstyle' => [], 'rows' => []];
         $tableinit = true;
