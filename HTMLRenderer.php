@@ -8,20 +8,12 @@ class HTMLRenderer
     public string $html = '';
     public $title, $toc = [], $fn_overview = [], $fn = [], $fnset = [];
 
-    /**
-     * fn_overview: 
-     * ['예시', 2, 3]
-     * 
-     * fn:
-     * ['예시' => 'ㅁㄴㅇㄹ']
-     */
     public function __construct()
     {}
 
     public function render($token)
     {
         $result = '';
-        //echo htmlspecialchars(json_encode($token, JSON_UNESCAPED_UNICODE), JSON_UNESCAPED_UNICODE);
         foreach($token as $t){
             switch($t['type']){
                 
@@ -57,10 +49,13 @@ class HTMLRenderer
                     $result .= '<span style="color: '.$t['color'].'">'.$t['text'].'</span>';
                     break;
                 case 'anchor':
-                    $result .= '<a name="'.$t['text'].'"></a>';
+                    $result .= '<a id="'.$t['text'].'"></a>';
                     break;
                 case 'video':
                     $result .= '<iframe width="'.$t['width'].'" height="'.$t['height'].'" src="'.$t['src'].'" frameborder="0" allowfullscreen loading="lazy"></iframe>';
+                    break;
+                case 'blockquote':
+                    $result .= '<blockquote class="wiki-quote">'.$t['html'].'</blockquote>';
                     break;
                 case 'footnote':
                     $result .= '<a class="wiki-fn-content" href="#fn-'.$t['name'].'"><span class="target" id="rfn-'.$t['id'].'"></span>['.$t['name'].']</a>';
@@ -68,10 +63,14 @@ class HTMLRenderer
                 case 'heading':
                     $result .= '</div>
                             <h'.$t['level'].' class="wiki-heading" '.$t['folded'].'>'
-                            .  '<a id="s-'.$t['section'].'" href="#_toc">'.$t['section'].'.</a><span id="'.$t['text'].'">'.$t['text'].'</span>'
+                            .  '<a id="s-'.$t['section'].'" href="#_toc">'.$t['section'].'.</a><span id="'.strip_tags($t['id']).'">'.$t['text'].'</span>'
                             .  '<span class="wiki-edit-section"><a href="/edit/'.$this->title.'?section='.$t['section'].'" rel="nofollow">[편집]</a></span>
                             </span>
                         </h'.$t['level'].'><div id="content-s-'.$t['section'].'" class="wiki-heading-content" fold="'.$t['folded'].'">';
+                    break;
+                case 'folding':
+                    $result .= '<dl class="wiki-folding"><dt>'.$t['text']
+                            .'</dt><dd>'.$t['html'].'</dd></dl>';
                     break;
                 case 'footnotes':
                     $result .= $this->printFootnote($t['from'], $t['until']);
@@ -98,7 +97,7 @@ class HTMLRenderer
                     break;
                 case 'link':
                     if($t['linktype'] == 'file'){
-                        if(in_array('not-exist', $t['class']))
+                        /*if(in_array('not-exist', $t['class']))
                             $result .= '<a class="wiki-link-internal not-exist" href="'.$t['href'].'">'.$t['href'].'</a>';
                         else{
                             $result = '<a class="wiki-link-auto" title="'.'" href="'.'" rel="nofollow">'
@@ -107,7 +106,7 @@ class HTMLRenderer
                             .'<img class="wiki-image-space"'.$t['wraptag']
                             .' src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTE3OCIgaGVpZ2h0PSIxMTc4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjwvc3ZnPg==">'
                             .'<img class="wiki-image" '.$t['wraptag'].'src="'.$t['href'].'" alt="'.$t['fnwithouttext'].'" loading="lazy"></span></span></a>';
-                        }
+                        }*/
                     }else{
                         if(count($t['class']) > 0)
                             $classStr = implode(' ', $t['class']);
@@ -120,7 +119,6 @@ class HTMLRenderer
             }
         }
 
-        //var_dump($result);
         return $result;
     }
 
@@ -128,19 +126,17 @@ class HTMLRenderer
     {
         if(strpos($listdata['listtype'], 'ul') !== false)
             $tag = 'ul';
-        elseif(strpos($listdata['listtype'], 'ol') !== false)
+        elseif(strpos($listdata['listtype'], 'list') !== false)
             $tag = 'ol';
-        elseif($listdata['listtype'] == 'indent')
+        elseif($listdata['listtype'] == 'wiki-indent')
             $tag = 'div';
-        else
-            var_dump($listdata);
         
-        $html = '<'.$tag.' '.($tag == 'ol' ? 'start="'.$listdata['start'].'"': '').'>';
+        $html = '<'.$tag.' '.($tag == 'ol' ? 'start="'.$listdata['start'].'" ': ' ').'class="'.$listdata['listtype'].'">';
         
         foreach($listdata['lists'] as $li){
             
             if($tag == 'div'){
-                $html .= '<div>'.$li['html'].'</div>';
+                $html .= $li['html'];
             }else{
                 $html .= '<li><div>'.$li['html'].'</div></li>';
             }
@@ -153,41 +149,37 @@ class HTMLRenderer
     private function printTable($token)
     {
         $tdAttrStr = $trInnerStr = $tdAttrStr = $trAttrStr = $tableInnerStr = $tableAttrStr = '';
-        $tableAttr = [];
-        // token to HTML
+        $tableAttr = $token['style'];
+
         foreach ($token['rows'] as $r){
             if(!is_array($r))
                 return false;
-            foreach ($r['cols'] as $rc){
-                if($rc == 'span')
+            if(empty($r)){
+                $tableInnerStr .= '<tr></tr>';
                 continue;
-                if(!isset($rc['style']['text-align'])){
-                    $start = (substr($rc['text'], 0, 1) === ' ');
-                    $end = (substr($rc['text'], -1, 1) === ' ');
-                    if($start && $end)
-                        $rc['style']['text-align'] = 'center';
-                    elseif($start && !$end)
-                        $rc['style']['text-align'] = 'right';
-                    elseif(!$start && $end)
-                        $rc['style']['text-align'] = 'left';
-                }
-                if(!empty($rc['style'])){
-                    $rcCount = count($rc['style']);
-                    $rcKeys = array_keys($rc['style']);
-                    for($k=0; $k<$rcCount; ++$k){
-                        if($k !== 0)
-                        $tdAttrStr .= ' ';
-                        $tdAttrStr .= $rcKeys[$k].':'.$rc['style'][$rcKeys[$k]].';';
+            }else{
+                foreach ($r['cols'] as $rc){
+                    if($rc == 'span')
+                        continue;
+                    if(!empty($rc['style'])){
+                        $rcCount = count($rc['style']);
+                        $rcKeys = array_keys($rc['style']);
+                        for($k=0; $k<$rcCount; ++$k){
+                            if($k !== 0)
+                            $tdAttrStr .= ' ';
+                            $tdAttrStr .= $rcKeys[$k].':'.$rc['style'][$rcKeys[$k]].';';
+                        }
                     }
+                        if(strlen($tdAttrStr) > 0)
+                            $tdAttrStr = ' style="'.$tdAttrStr.'"';
+                        if(isset($rc['rowspan']))
+                            $tdAttrStr .= ' rowspan="'.$rc['rowspan'].'"';
+                        if(isset($rc['colspan']))
+                            $tdAttrStr .= ' colspan="'.$rc['colspan'].'"';
+                        $trInnerStr .= '<td'.$tdAttrStr.'>'.$rc['text'].'</td>';
+                        $tdAttrStr = '';
                 }
-                    if(strlen($tdAttrStr) > 0)
-                        $tdAttrStr = ' style="'.$tdAttrStr.'"';
-                    if(isset($rc['rowspan']))
-                        $tdAttrStr .= ' rowspan="'.$rc['rowspan'].'"';
-                    if(isset($rc['colspan']))
-                        $tdAttrStr .= ' colspan="'.$rc['colspan'].'"';
-                    $trInnerStr .= '<td'.$tdAttrStr.'>'.$rc['text'].'</td>';
-                    $tdAttrStr = '';
+
             }
             if(!empty($r['style'])){
                 $attrlen = count($r['style']);
@@ -206,14 +198,19 @@ class HTMLRenderer
         $attrlen = count($tableAttr);
         $attkeys = array_keys($tableAttr);
         for($k=0; $k<$attrlen; ++$k){
-            $tableAttrStr .= $attkeys[$k].':'.$tableAttr[$attkeys[$k]].'; ';
+            if($attkeys[$k] == 'tablebordercolor')
+                $tableAttrStr .= 'border: 2px solid '.$tableAttr[$attkeys[$k]].';';
+            else
+                $tableAttrStr .= $attkeys[$k].':'.$tableAttr[$attkeys[$k]].'; ';
         }
         if(strlen($tableAttrStr) > 0)
             $tableAttrStr = ' style="'.$tableAttrStr.'"';
-        if(!isset($tbClassStr))
+        if(empty($token['class']))
             $tbClassStr = '';
+        else
+            $tbClassStr = implode(' ', $token['class']);
         
-        return '<div class="wiki-table-wrap'.$tbClassStr.'"><table class="wiki-table" '.$tableAttrStr.'>'.$tableInnerStr.'</table></div>';
+        return '<div class="wiki-table-wrap '.$tbClassStr.'"><table class="wiki-table" '.$tableAttrStr.'>'.$tableInnerStr.'</table></div>';
     }
 
     private function printCategories()
@@ -223,13 +220,14 @@ class HTMLRenderer
     private function printFootnote(int $from, int $until)
     {
         $result = '<div>';
-        $fns = array_pop($this->fnset);
+        $fns = $this->fnset[0];
+        array_shift($this->fnset);
 
         if($from == $until)
             return '<div class="wiki-macro-footnote"></div>';
         
-        for ($i=$from; $i<$until; ++$i) {
-            $fn_name = $this->fn_overview[$i];
+        for ($i=$from+1; $i<=$until; ++$i) {
+            $fn_name = $this->fn_overview[$i - 1];
 
             if(isset($fns[$fn_name]) && $fn_name !== $i && $i === $fns[$fn_name][0]){
                 // 이름이 지정된 각주
