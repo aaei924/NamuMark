@@ -41,7 +41,7 @@ class WikiPage {
 }
 
 class NamuMark {
-    public $lastchange, $title, $included, $namespaces, $noredirect = 0, $inThread, $pageCount, $totalPageCount, $intable, $firstlinebreak = false, $fromblockquote = false;
+    public $lastchange, $title, $included, $namespaces, $noredirect = 0, $inThread, $pageCount, $totalPageCount, $intable, $category = [], $firstlinebreak = false, $fromblockquote = false;
     private $WikiPage, $wikitextbox = false, $imageAsLink, $linenotend, $htr;
 
     private static $list_tags = [
@@ -152,7 +152,7 @@ class NamuMark {
         'vimeo' => '//player.vimeo.com/video/'
     ];
 
-    private $macro_processors = [], $toc = [], $fn = [], $fn_overview = [], $links = [], $category = [], $fnset = [];
+    private $macro_processors = [], $toc = [], $fn = [], $fn_overview = [], $links = [], $fnset = [];
     private $fn_names = [], $fn_cnt = 0, $ind_level = 0, $lastfncount = 0, $bqcount = 0;
 
     function __construct()
@@ -181,7 +181,7 @@ class NamuMark {
         $this->htr->fn = $this->fn;
         $this->htr->fnset = $this->fnset;
         unset($wtext);
-        return ($this->wikitextbox?'':'<div id="content-s-0" class="wiki-heading-content">').$this->htr->render($token);
+        return ($this->wikitextbox?$this->htr->render($token):'<div id="content-s-0" class="wiki-heading-content">'.$this->htr->render($token).'</div>');
     }
 
     /**
