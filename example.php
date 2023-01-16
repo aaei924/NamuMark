@@ -5,7 +5,7 @@
 <link rel="stylesheet" href="./src/namumark.css">
 <meta charset="UTF-8">
 <?php
-/** Test Code */
+
 require 'NamuMark.php';
 $c = file_get_contents('samples/sample.txt');
 $wEngine = new NamuMark();

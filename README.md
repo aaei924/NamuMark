@@ -35,7 +35,6 @@ $nm->category; // 분류 목록
 
 다음 코드를 HTML 영역의 <head> 태그 안에 붙여 넣으시면 됩니다.
 ```html
-<meta charset="UTF-8">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.css" integrity="sha384-zB1R0rpPzHqg7Kpt0Aljp8JPLqbXI3bhnPWROx27a9N0Ll6ZP/+DiW/UqRcLbRjq" crossorigin="anonymous"/>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/katex.min.js" integrity="sha384-y23I5Q6l+B6vatafAwxRu/0oK/79VlbSz7Q9aiSZUvyWYIYsd+qj+o24G5ZU2zJz" crossorigin="anonymous"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.11.1/dist/contrib/auto-render.min.js" integrity="sha384-kWPLUVMOks5AQFrykwIup5lo0m3iMkkHrD0uJ4H5cjeGihAutqP0yW0J6dpFiVkI" crossorigin="anonymous" onload="renderMathInElement(document.body);"></script>
@@ -51,9 +50,9 @@ $nm->category; // 분류 목록
 ```
 
 
-### 목차
-목차 접힘을 구현하기 위해서는 HTML 상에 다음 코드가 필요합니다.
-```html
+### 별도 스크립트 적용을 요하는 문법
+목차 접힘, folding 문법 등이 정상적으로 작동하게끔 구현하기 위해서는 HTML 상에 다음 js 코드가 필요합니다.
+```js
 추가 예정
 ```
 

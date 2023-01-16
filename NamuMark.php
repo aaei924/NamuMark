@@ -497,7 +497,7 @@ class NamuMark {
                         if(
                             !in_array($attrxs, $tableattrinit) && (
                                 (in_array($tbattr[1], ['tablealign', 'table align']) && in_array($tbattr[2], ['center', 'left', 'right'])) ||
-                                (in_array($tbattr[1], ['tablewidth', 'table width']) && preg_match('/^-?[0-9.]*(px|%)$/', $tbattr[2])) || 
+                                (in_array($tbattr[1], ['tablewidth', 'table width']) && preg_match('/^-?[0-9.]*(px|%|)$/', $tbattr[2], $tbw)) || 
                                 (in_array($tbattr[1], ['tablebgcolor', 'table bgcolor', 'tablecolor', 'table color', 'tablebordercolor', 'table bordercolor']) &&
                                 self::chkColor($this, $tbattr[2]))
                             )
@@ -520,6 +520,8 @@ class NamuMark {
                                     break;
                                 case 'tablewidth':
                                     $tbAttrNm = 'width';
+                                    if($tbw[1] == '')
+                                        $tbattr[2] .= 'px';
                                     break;
                                 default:
                                     $tbAttrNm = $attrxs;
@@ -561,7 +563,8 @@ class NamuMark {
                                 default:
                                     $tbAttrNm = $tbattr[1];
                             }
-                            $token['colstyle'][$colIndex][$tbAttrNm] = $tbattr[2];
+                            $token['colstyle'][$colIndex][$rowIndex][$tbAttrNm] = $tbattr[2];
+                            $tdAttr[$tbAttrNm] = $tbattr[2];
                         }elseif(
                             // 개별 셀 속성
                             (in_array($tbattr[1], ['width', 'height']) && preg_match('/^-?[0-9.]*(px|%)?$/', $tbattr[2])) ||

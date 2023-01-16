@@ -5,7 +5,6 @@
  */
 class HTMLRenderer
 {
-    public string $html = '';
     public $title, $toc = [], $fn_overview = [], $fn = [], $fnset = [];
 
     public function __construct()
@@ -151,9 +150,24 @@ class HTMLRenderer
         $tdAttrStr = $trInnerStr = $tdAttrStr = $trAttrStr = $tableInnerStr = $tableAttrStr = '';
         $tableAttr = $token['style'];
 
+        if(!empty($token['colstyle'])){
+            foreach($token['colstyle'] as $cci => $cs){
+                foreach($cs as $ccr => $ccs){
+                    $rcnt = count($token['rows']);
+                    for($j=$ccr; $j<$rcnt; $j++){
+                        if(!isset($token['rows'][$j]['cols'][$cci]['style']))
+                            $token['rows'][$j]['cols'][$cci]['style'] = $ccs;
+                        else
+                            $token['rows'][$j]['cols'][$cci]['style'] = array_merge($ccs, $token['rows'][$j]['cols'][$cci]['style']);
+                    }
+                }
+            }
+        }
+
         foreach ($token['rows'] as $r){
             if(!is_array($r))
                 return false;
+
             if(empty($r)){
                 $tableInnerStr .= '<tr></tr>';
                 continue;
