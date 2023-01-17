@@ -391,7 +391,7 @@ class NamuMark {
     }
 
     //+ Rebuilt by PRASEOD-
-    protected function tableParser($text, &$offset): array|false
+    private function tableParser($text, &$offset): array|false
     {   
         $token = ['type' => 'table', 'class' => [], 'caption' => null, 'colstyle' => [], 'rows' => []];
         $tableinit = true;
@@ -534,7 +534,7 @@ class NamuMark {
                                 (in_array($tbattr[1], ['tablealign', 'table align']) && in_array($tbattr[2], ['center', 'left', 'right'])) ||
                                 (in_array($tbattr[1], ['tablewidth', 'table width']) && preg_match('/^-?[0-9.]*(px|%|)$/', $tbattr[2], $tbw)) || 
                                 (in_array($tbattr[1], ['tablebgcolor', 'table bgcolor', 'tablecolor', 'table color', 'tablebordercolor', 'table bordercolor']) &&
-                                self::chkColor($this, $tbattr[2]))
+                                self::chkColor($tbattr[2]))
                             )
                         ){
                             // 표 속성
@@ -568,7 +568,7 @@ class NamuMark {
                         }elseif(
                             // 개별 행 속성
                             in_array($tbattr[1], ['rowbgcolor', 'rowcolor']) && 
-                            self::chkColor($this, $tbattr[2])
+                            self::chkColor($tbattr[2])
                         ){
                             $i += strlen($tbattr[0]) + 2;
                             switch($tbattr[1]){
@@ -585,7 +585,7 @@ class NamuMark {
                         }elseif(
                             // 개별 열 속성
                             in_array($tbattr[1], ['colbgcolor', 'colcolor']) && 
-                            self::chkColor($this, $tbattr[2])
+                            self::chkColor($tbattr[2])
                         ){
                             $i += strlen($tbattr[0]) + 2;
                             switch($tbattr[1]){
@@ -603,7 +603,7 @@ class NamuMark {
                         }elseif(
                             // 개별 셀 속성
                             (in_array($tbattr[1], ['width', 'height']) && preg_match('/^-?[0-9.]*(px|%)?$/', $tbattr[2])) ||
-                            (in_array($tbattr[1], ['color', 'bgcolor']) && self::chkColor($this, $tbattr[2]))
+                            (in_array($tbattr[1], ['color', 'bgcolor']) && self::chkColor($tbattr[2]))
                         ){
                             $i += strlen($tbattr[0]) + 2;
                             switch($tbattr[1]){
@@ -1048,7 +1048,7 @@ class NamuMark {
         return $result;
     }
 
-    protected function renderProcessor($text): array
+    private function renderProcessor($text): array
     {
         // + 대소문자 구분 반영
         if(str_starts_with($text, '#!html') && $this->inThread !== false) {
@@ -1078,7 +1078,7 @@ class NamuMark {
         } elseif(preg_match('/^\-([1-5]) (.*)/', $text, $size)) {
             // {{{-작은글씨}}}
             return [['type' => 'wiki-size', 'size' => 'down-'.$size[1], 'text' => $this->blockParser($size[2])]];
-        } elseif(preg_match('/^#(?:([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})|([A-Za-z]+)) (.*)/', $text, $color) && (self::chkColor($this, $color[1], '') || self::chkColor($this, $color[2], ''))) {
+        } elseif(preg_match('/^#(?:([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})|([A-Za-z]+)) (.*)/', $text, $color) && (self::chkColor($color[1], '') || self::chkColor($color[2], ''))) {
             if(empty($color[1]) && empty($color[2]))
                 return [['type' => 'plaintext', 'text' => $text]];
             return [['type' => 'colortext', 'color' => (empty($color[1])?$color[2]:'#'.$color[1]), 'text' => $this->formatParser($color[3])]];
@@ -1126,7 +1126,7 @@ class NamuMark {
                 foreach($options as $option){
                     $opt = explode('=', $option);
 
-                    if(($opt[0] == 'height' || $opt[0] == 'width') && !preg_match('/^[0-9]/', $opt[1]) || ($opt[0] == 'align' && !in_array($opt[1], ['left', 'center', 'right','middle','bottom','top'])) || !self::chkColor($this, $opt[1])){
+                    if(($opt[0] == 'height' || $opt[0] == 'width') && !preg_match('/^[0-9]/', $opt[1]) || ($opt[0] == 'align' && !in_array($opt[1], ['left', 'center', 'right','middle','bottom','top'])) || !self::chkColor($opt[1])){
                         // invalid format
                         continue;
                     }elseif(($opt[0] == 'height' || $opt[0] == 'width') && preg_match('/%$/', $opt[1]))
@@ -1331,22 +1331,23 @@ class NamuMark {
                             $include[2] = 'sm'.$include[2];
                     }
                     
-                    $include = explode(',', $include[2]);
+                    $components = explode(',', $include[2]);
                     $var = array();
                     $urlvararr = [];
-                    foreach($include as $v) {
+                    foreach($components as $v) {
                         $v = explode('=', $v);
                         if(empty($v[1]))
                             $v[1]='';
                         $var[$v[0]] = $v[1];
 
-                        if($include[1] == 'youtube' && ($v[0] == 'start' || $v[1] == 'end'))
+                        if($include[1] == 'youtube' && ($v[0] == 'start' || $v[0] == 'end'))
                             array_push($urlvararr, implode('=',$v));
                     }
+                    
                     return [['type' => 'video', 
                     'width' => (!empty($var['width'])?$var['width']:'640'), 
                     'height' => (!empty($var['height'])?$var['height']:'360'), 
-                    'src' => $this->videoURL[$include[1]].$include[2].(!empty($urlvararr)?'?'.implode('&', $urlvararr):'')], ];
+                    'src' => self::$videoURL[$include[1]].$components[0].(!empty($urlvararr)?'?'.implode('&', $urlvararr):'')], ];
                     
                 }
                 elseif(preg_match('/^age\((.*)\)$/i', $text, $include)) {
@@ -1488,7 +1489,7 @@ class NamuMark {
                     return [['type' => 'wiki-size', 'size' => 'up-'.$size[1], 'text' => $this->blockParser($size[2])]];
                 elseif(preg_match('/^\-([1-5]) (.*)/', $text, $size))
                     return [['type' => 'wiki-size', 'size' => 'down-'.$size[1], 'text' => $this->blockParser($size[2])]];
-                elseif(preg_match('/^#(?:([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})|([A-Za-z]+)) (.*)/', $text, $color) && (self::chkColor($this, $color[1], '') || self::chkColor($this, $color[2], ''))) {
+                elseif(preg_match('/^#(?:([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})|([A-Za-z]+)) (.*)/', $text, $color) && (self::chkColor($color[1], '') || self::chkColor($color[2], ''))) {
                     if(empty($color[1]) && empty($color[2]))
                         return [['type' => 'plaintext', 'text' => $text]];
                     return [['type' => 'colortext', 'color' => (empty($color[1])?$color[2]:'#'.$color[1]), 'text' => $this->blockParser($color[3])]];
@@ -1554,11 +1555,11 @@ class NamuMark {
         return ($r=strpos($text, $str, $offset))===false?strlen($text):$r;
     }
 
-    private static function chkColor($context, string $color, $sharp = '#'): bool
+    private static function chkColor(string $color, $sharp = '#'): bool
     {
         if(preg_match('/^'.$sharp.'([0-9a-fA-F]{3}|[0-9a-fA-F]{6})/', $color))
             return true;
-        elseif(in_array($color, $context::$cssColors))
+        elseif(in_array($color, self::$cssColors))
             return true;
         else
             return false;
