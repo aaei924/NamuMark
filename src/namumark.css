@@ -108,7 +108,7 @@ code,kbd,pre,samp{font-family:Menlo,Monaco,Consolas,Courier New,monospace;font-s
 .w dl.wiki-folding{margin:0;}
 .w dl.wiki-folding dt {cursor: pointer;font-weight: 700;-webkit-user-select: none;-moz-user-select: none;-ms-user-select: none;user-select: none;}
 .w dl.wiki-folding dd {transition:all .15s ease-out;}
-.w dl.wiki-folding dd.unfolded {opacity: 1;transition: all .15s ease-in;}
+.w dl.wiki-folding dd.unfolded {opacity: 1;transition: all .15s ease-in; max-height:none; max-width:none;}
 .w dl.wiki-folding dd {margin: 0;max-height: 0;max-width: 0;overflow: hidden;}
 
 /* Blockquote */

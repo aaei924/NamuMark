@@ -62,7 +62,7 @@ class HTMLRenderer
                 case 'heading':
                     $result .= '</div>
                             <h'.$t['level'].' class="wiki-heading" '.$t['folded'].'>'
-                            .  '<a id="s-'.$t['section'].'" href="#_toc">'.$t['section'].'.</a><span id="'.strip_tags($t['id']).'">'.$t['text'].'</span>'
+                            .  '<a id="s-'.$t['section'].'" href="#toc">'.$t['section'].'.</a><span id="'.strip_tags($t['id']).'">'.$t['text'].'</span>'
                             .  '<span class="wiki-edit-section"><a href="/edit/'.$this->title.'?section='.$t['section'].'" rel="nofollow">[편집]</a></span>
                             </span>
                         </h'.$t['level'].'><div id="content-s-'.$t['section'].'" class="wiki-heading-content" fold="'.$t['folded'].'">';
@@ -155,10 +155,12 @@ class HTMLRenderer
                 foreach($cs as $ccr => $ccs){
                     $rcnt = count($token['rows']);
                     for($j=$ccr; $j<$rcnt; $j++){
-                        if(!isset($token['rows'][$j]['cols'][$cci]['style']))
-                            $token['rows'][$j]['cols'][$cci]['style'] = $ccs;
-                        else
-                            $token['rows'][$j]['cols'][$cci]['style'] = array_merge($ccs, $token['rows'][$j]['cols'][$cci]['style']);
+                        if(isset($token['rows'][$j]['cols'][$cci])){
+                            if(!isset($token['rows'][$j]['cols'][$cci]['style']))
+                                $token['rows'][$j]['cols'][$cci]['style'] = $ccs;
+                            else
+                                $token['rows'][$j]['cols'][$cci]['style'] = array_merge($ccs, $token['rows'][$j]['cols'][$cci]['style']);
+                        }
                     }
                 }
             }

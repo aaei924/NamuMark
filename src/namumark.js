@@ -35,15 +35,15 @@ document.addEventListener("DOMContentLoaded", function () {
     })
 })
 
-// 나무마크
-qa('.wiki-heading').forEach(r => {
+// 문단 접기
+qa('.w .wiki-heading').forEach(r => {
     e(r, 'click', () => {
-        var id = r.id
-        var c = g('content-'+id)
+        var c = r.nextSibling
+        
         if(a.g(r, 'fold') == 'true'){
             a.s(r, 'fold', 'false')
             a.s(c, 'fold', 'false')
-        }else if(a.g(r, 'fold') == 'false'){
+        }else{
             a.s(r, 'fold', 'true')
             a.s(c, 'fold', 'true')
         }
@@ -56,3 +56,18 @@ qa('a.wiki-fn-content').forEach(r => {
         q('div.popper__inner').innerHTML = q('span.footnote-list>span'+id).parentNode.innerHTML
     })
 })
+
+// 접기
+qa('.w dl.wiki-folding dt').forEach(r => {
+    e(r, 'click', () => {
+        var s = r.nextSibling;
+        //s.style.cssText = 'max-width:' + r.offsetWidth + 'px;max-height:' + r.offsetHeight + 'px;'
+
+        if(c.c(s, 'unfolded'))
+            c.r(s, 'unfolded')
+        else
+            c.a(s, 'unfolded')
+
+        //s.style.cssText = ''
+    })
+})  
