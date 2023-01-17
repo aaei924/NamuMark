@@ -1052,7 +1052,7 @@ class NamuMark {
     {
         // + 대소문자 구분 반영
         if(str_starts_with($text, '#!html') && $this->inThread !== false) {
-            return [['type' => 'inline-html', 'text' => preg_replace('/UNIQ--.*?--QINU/', '', substr($text, 7))]];
+            return [['type' => 'inline-html', 'text' => substr($text, 7)]];
         } elseif(preg_match('/^#!wiki(.*)\n/', $text, $match)) {
             // + {{{#!wiki }}} 문법
             $divattr = '';
