@@ -411,11 +411,6 @@ class NamuMark {
         $colIndex = 0;
         $rowspan = 0;
         $colspan = 0;
-        $chpos = function($now, &$i) {
-            if(strlen($now) > 1){
-                $i += strlen($now) - 1;
-            }
-        };
 
         // caption 파싱은 처음에만
         if(str_starts_with(substr($text,$i), '|') && !str_starts_with(substr($text,$i), '||') && $tableinit === true) {
@@ -440,18 +435,23 @@ class NamuMark {
             return false;
 
         // text 변수에는 표 앞부분의 ||가 제외된 상태의 문자열이 있음
-        for($i; $i<$len; ++$i){
+        for($i; $i<$len; self::nextChar($text,$i)){
             $now = self::getChar($text,$i);
 
             //+ 백슬래시 문법
             if($now == "\\" && $inEscape < 1 && !$brInEscape){
+                $emptytd = false;
                 $unloadedstr .= $now;
-                ++$i;
-                $unloadedstr .= self::getChar($text,$i);
-                $chpos($now, $i);
+                $unloadedstr .= self::nextChar($text, $i);
                 continue;
-            }elseif(str_starts_with(substr($text,$i), '{{{') && strpos(substr($text, $i), '}}}') !== false){
+            }elseif($inEscape < 1 && !$intd && str_starts_with(substr($text,$i), '##')){
+                $i = strpos($text,"\n",$i);
+                //continue;
+            }
+            
+            if(str_starts_with(substr($text,$i), '{{{') && strpos(substr($text, $i), '}}}') !== false){
                 // 삼중괄호 안 ||를 무효화 처리하기 위한 부분
+                $emptytd = false;
                 $brInEscape = false;
                 $unloadedstr .= '{{{';
                 $inEscape++;
@@ -495,6 +495,7 @@ class NamuMark {
                             $unloadedstr = substr($unloadedstr, 0, strlen($unloadedstr) - 1);
                         }
                     }
+                    var_dump($unloadedstr);
 
                     $tdInnerStr .= $this->blockParser($unloadedstr);
                     $unloadedstr = '';
@@ -666,7 +667,7 @@ class NamuMark {
                     ++$rowIndex;
                     $colIndex = 0;
                     $intd = false;
-                }elseif(str_starts_with(substr($text,$i), "\n") && self::getChar($text,$i+1) !== '|' && 
+                }elseif(str_starts_with(substr($text,$i), "\n") && self::getChar($text,$i+1) !== '|' && !str_starts_with(substr($text,$i+1),'##') && 
                     ($unloadedstr == '' && $tdInnerStr == '' && $emptytd) && 
                     (($rowIndex !== 0 || $colIndex !== 0) && strpos($text, '||', $i) !== false)
                 ) {
@@ -683,7 +684,6 @@ class NamuMark {
                 $unloadedstr.=$now;
                 $emptytd = false;
             }
-            $chpos($now, $i);
         }
 
         $token['class'] = $tableCls;
@@ -704,6 +704,7 @@ class NamuMark {
         $eol = false;
         $listdata = ['type' => 'list', 'lists' => []];
         $html = '';
+        $inEscape = 0;
         ++$offset;
         ++$this->ind_level;
         
@@ -722,7 +723,25 @@ class NamuMark {
                 $now = self::nextChar($text,$i);
             }
             
-            if(
+            if(str_starts_with(substr($text,$i), '{{{') && strpos(substr($text,$i), '}}}') !== false){
+                $html .= '{{{';
+                $i += 2;
+                ++$inEscape;
+                continue;
+            }elseif(str_starts_with(substr($text,$i), '}}}') && $inEscape > 0){
+                $html .= '}}}';
+                $i += 2;
+                --$inEscape;
+
+                $j = $i;
+                self::nextChar($text,$j);
+                if($j >= $len){
+                    $list['html'] = $this->blockParser($html, ($listdata['listtype'] == 'wiki-indent'));
+                    array_push($listdata['lists'], $list);
+                    $list = [];
+                }
+                continue;
+            }elseif(
                 ($linestart && preg_match('/^((\*|1\.|a\.|A\.|I\.|i\.)(#[^ ]*)? ?)(.*)/', substr($text,$i), $match))
             ){
                 // 리스트
@@ -759,7 +778,7 @@ class NamuMark {
                 $linestart = false;
             }
             
-            if($now == "\n"){
+            if($now == "\n" && $inEscape < 1){
                 // 공백 처리
                 //if($emptyline)
                 //    $skipbreak = true;
@@ -1051,7 +1070,9 @@ class NamuMark {
     private function renderProcessor($text): array
     {
         // + 대소문자 구분 반영
-        if(str_starts_with($text, '#!html') && $this->inThread !== false) {
+        if(str_starts_with($text, '#!html')) {
+            if($this->inThread)
+                return [['type' => 'void']];
             return [['type' => 'inline-html', 'text' => substr($text, 7)]];
         } elseif(preg_match('/^#!wiki(.*)\n/', $text, $match)) {
             // + {{{#!wiki }}} 문법
@@ -1074,14 +1095,14 @@ class NamuMark {
             return [['type' => 'syntax', 'lang' => $match[1], 'text' => preg_replace('/#!syntax ([^\s]*)/', '', $text)]];
         } elseif(preg_match('/^\+([1-5]) (.*)/', $text, $size)) {
             // {{{+큰글씨}}}
-            return [['type' => 'wiki-size', 'size' => 'up-'.$size[1], 'text' => $this->blockParser($size[2])]];
+            return [['type' => 'wiki-size', 'size' => 'up-'.$size[1], 'text' => $this->blockParser(substr($text, strlen($size[1]) + 1))]];
         } elseif(preg_match('/^\-([1-5]) (.*)/', $text, $size)) {
             // {{{-작은글씨}}}
-            return [['type' => 'wiki-size', 'size' => 'down-'.$size[1], 'text' => $this->blockParser($size[2])]];
-        } elseif(preg_match('/^#(?:([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})|([A-Za-z]+)) (.*)/', $text, $color) && (self::chkColor($color[1], '') || self::chkColor($color[2], ''))) {
-            if(empty($color[1]) && empty($color[2]))
-                return [['type' => 'plaintext', 'text' => $text]];
-            return [['type' => 'colortext', 'color' => (empty($color[1])?$color[2]:'#'.$color[1]), 'text' => $this->formatParser($color[3])]];
+            return [['type' => 'wiki-size', 'size' => 'down-'.$size[1], 'text' => $this->blockParser(substr($text, strlen($size[1]) + 1))]];
+        } elseif(preg_match('/^(#[A-Fa-f0-9]{3}|#[A-Fa-f0-9]{6}|#([A-Za-z]+)) (.*)/', $text, $color) && (self::chkColor($color[1]) || self::chkColor($color[2]))) {
+            //if(empty($color[1]))
+            //    return [['type' => 'plaintext', 'text' => $text]];
+            return [['type' => 'colortext', 'color' => (empty($color[2])?$color[1]:$color[2]), 'text' => $this->blockParser(substr($text, strlen($color[1])))]];
         } else {
             return [['type' => 'rawtext', 'text' => htmlspecialchars($text)]];
             // 문법 이스케이프
@@ -1299,6 +1320,8 @@ class NamuMark {
             case 'clearfix':
                 //+ clearfix
                 return [['type' => 'plaintext', 'text' => '<div style="clear:both;"></div>']];
+            case 'pagecount':
+                return [['type' => 'plaintext', 'text' => $this->totalPageCount]];
             default:
                 if(preg_match('/^include\((.*)\)$/i', $text, $include) && $include = $include[1]) {
                     if($this->included || $this->inThread)
@@ -1485,14 +1508,18 @@ class NamuMark {
                 return array_merge([['type' => 'text-start', 'effect' => $tagnameset[$type]]], $text, [['type' => 'text-end', 'effect' => $tagnameset[$type]]]);
             case '{{{':
                 // 개행 없어도 적용되는 삼중괄호 문법
-                if(preg_match('/^\+([1-5]) (.*)/', $text, $size))
-                    return [['type' => 'wiki-size', 'size' => 'up-'.$size[1], 'text' => $this->blockParser($size[2])]];
+                if(str_starts_with($text, '#!html')) {
+                    if($this->inThread)
+                        return [['type' => 'void']];
+                    return [['type' => 'inline-html', 'text' => substr($text, 7)]];
+                } elseif(preg_match('/^\+([1-5]) (.*)/', $text, $size))
+                    return [['type' => 'wiki-size', 'size' => 'up-'.$size[1], 'text' => $this->blockParser(substr($text, strlen($size[1]) + 1))]];
                 elseif(preg_match('/^\-([1-5]) (.*)/', $text, $size))
-                    return [['type' => 'wiki-size', 'size' => 'down-'.$size[1], 'text' => $this->blockParser($size[2])]];
-                elseif(preg_match('/^#(?:([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})|([A-Za-z]+)) (.*)/', $text, $color) && (self::chkColor($color[1], '') || self::chkColor($color[2], ''))) {
-                    if(empty($color[1]) && empty($color[2]))
-                        return [['type' => 'plaintext', 'text' => $text]];
-                    return [['type' => 'colortext', 'color' => (empty($color[1])?$color[2]:'#'.$color[1]), 'text' => $this->blockParser($color[3])]];
+                    return [['type' => 'wiki-size', 'size' => 'down-'.$size[1], 'text' => $this->blockParser(substr($text, strlen($size[1]) + 1))]];
+                elseif(preg_match('/^(#[A-Fa-f0-9]{3}|#[A-Fa-f0-9]{6}|#([A-Za-z]+)) (.*)/', $text, $color) && (self::chkColor($color[1]) || self::chkColor($color[2]))) {
+                    //if(empty($color[1]) && empty($color[2]))
+                    //    return [['type' => 'plaintext', 'text' => $text]];
+                    return [['type' => 'colortext', 'color' => (empty($color[2])?$color[1]:$color[2]), 'text' => $this->blockParser(substr($text, strlen($color[1])))]];
                 }else // 문법 이스케이프
                     return [['type' => 'escape', 'text' => htmlspecialchars($text)]];
             }

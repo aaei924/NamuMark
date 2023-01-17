@@ -117,3 +117,6 @@ code,kbd,pre,samp{font-family:Menlo,Monaco,Consolas,Courier New,monospace;font-s
 
 /* etc */
 iframe{display: block;max-width: 100%;}
+*, :after, :before {box-sizing:inherit;}
+
+html{-webkit-text-size-adjust: none;box-sizing: border-box;}
