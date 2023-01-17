@@ -7,7 +7,7 @@
 <?php
 
 require 'NamuMark.php';
-$c = file_get_contents('samples/videotest.txt');
+$c = file_get_contents('samples/advanced.txt');
 $wEngine = new NamuMark();
 $wEngine->noredirect = '1';
 $wEngine->title = '나무위키:문법 도움말';

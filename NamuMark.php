@@ -1343,7 +1343,7 @@ class NamuMark {
                         if($include[1] == 'youtube' && ($v[0] == 'start' || $v[0] == 'end'))
                             array_push($urlvararr, implode('=',$v));
                     }
-                    
+
                     return [['type' => 'video', 
                     'width' => (!empty($var['width'])?$var['width']:'640'), 
                     'height' => (!empty($var['height'])?$var['height']:'360'), 
@@ -1410,7 +1410,7 @@ class NamuMark {
                         $split = explode('=', $a);
                         if($split[0] == 'ruby'){
                             $rb = $split[1];
-                        }elseif($split[0] == 'color' && self::chkColor($this,$split[1])){
+                        }elseif($split[0] == 'color' && self::chkColor($split[1])){
                             $color = $split[1];
                         }
                     }
