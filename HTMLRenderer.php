@@ -18,7 +18,11 @@ class HTMLRenderer
                 
                 case 'void':
                     break;
+                case 'math':
+                    $result .= '<span class="katex">'.$t['text'].'</span>';
+                    break;
                 case 'syntax':
+                    $result .= '<pre><code class="syntax" data-language="'.$t['language'].'">'.$t['text'].'</code></pre>';
                     break;
                 case 'wikitext':
                     $result .= '<div '.$t['attr'].'>'.$t['text'].'</div>';
