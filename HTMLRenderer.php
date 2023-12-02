@@ -116,7 +116,7 @@ class HTMLRenderer
                         else
                             $classStr = '';
     
-                        $result .= '<a class="'.$classStr.'" href="'.$t['href'].'">'.$t['text'].'</a>';
+                        $result .= '<a class="'.$classStr.'" href="'.$t['href'].'" title="'.$t['target'].'">'.$t['text'].'</a>';
                     }
                     break;
             }

@@ -1264,11 +1264,14 @@ class NamuMark {
                 $target = $this->title.$target;
             elseif(strpos($target, ':파일:') === 0 || strpos($target, ':분류:') === 0){
                 $target = substr($target, strpos($target, ':분류:') + 1);
-                $display = $target;
+                
+                //$display = $target;
             }
             
-            if(strpos($target, '#') === 0)
-                $target = $this->title;
+            if(strpos($target, '#') === 0){
+                $href = '';
+                $target = '';
+            }
 
             if($target == $this->title && $sharp == '')
                 array_push($classList, 'wiki-self-link');
@@ -1276,7 +1279,8 @@ class NamuMark {
                 array_push($this->links, ['target'=>$target, 'type'=>'link']);
                 array_push($classList, 'wiki-link-internal');
             }
-            $href = '/w/'.$target.$exception;
+            if($href === null)
+                $href = '/w/'.$target.$exception;
         }
 
         //if(in_array('wiki-link-internal', $classList) && !$this->WikiPage->pageExists($target))
@@ -1284,7 +1288,7 @@ class NamuMark {
         
         if($rd !== 0) $rd = ['target' => $target.$exception, 'class' => $classList];
         
-        return [['type' => 'link', 'linktype' => 'general', 'class' => $classList, 'href' => $href.$sharp, 'text' => $display]];
+        return [['type' => 'link', 'linktype' => 'general', 'class' => $classList, 'target' => $target, 'href' => $href.$sharp, 'text' => $display]];
     }
 
     // 대괄호 문법

@@ -7,10 +7,10 @@
 <?php
 
 require 'NamuMark.php';
-$c = file_get_contents('samples/sample.txt');
+$c = file_get_contents('samples/primary.txt');
 $wEngine = new NamuMark();
 $wEngine->noredirect = '1';
-$wEngine->title = '나무위키:문법 도움말';
+$wEngine->title = 'PressDoWiki:문법 도움말';
 
 ?>
 <div class="w">
